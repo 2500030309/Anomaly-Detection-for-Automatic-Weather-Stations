@@ -188,7 +188,7 @@ class SkyGuardMap {
 
       const script = document.createElement('script');
       script.id = 'google-maps-sdk';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(this.apiKey)}&libraries=places,marker,geometry&v=weekly`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(this.apiKey)}&libraries=marker,geometry&v=weekly`;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
