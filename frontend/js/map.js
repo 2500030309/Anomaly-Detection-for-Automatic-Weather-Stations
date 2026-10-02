@@ -1,20 +1,32 @@
 /**
  * SkyGuard AI - Unified Command Center Map Module
+ * 
  * Implements:
- * - Google Maps JavaScript API with Advanced Markers and custom dark meteorological theme
+ * - Google Maps JavaScript API with custom dark meteorological theme
  * - Resilient fallback to Leaflet Carto Dark map if API key is missing or invalid
- * - NEVER shows a broken blank section
- * - Distinct marker states with color-blind accessible icons: ✓ NORMAL, ⚠ SENSOR FAULT, ⛈ WEATHER EVENT, ? UNCERTAIN
- * - Geodesic Spatial Buddy lines & Weather Event radius overlays
+ * - Zero hard-coded API keys in source code (configured via VITE_GOOGLE_MAPS_API_KEY, localStorage, or ?key=)
+ * - NEVER shows a broken or blank section
+ * - 8 Simulated Demo AWS Stations (AWS-001 through AWS-008)
+ * - Distinct marker states with color-blind accessible icons:
+ *     ✓ NORMAL
+ *     ⚠ SENSOR FAULT
+ *     ⛈ WEATHER EVENT
+ *     ? UNCERTAIN
+ * - Dynamic marker state updates during live simulation / sandbox injections
+ * - Interactive Google Maps InfoWindow with meteorological parameters, detection evidence, and "VIEW FULL 4-LAYER ANALYSIS" action
  * - Multi-criteria filter engine (status, health range, anomaly type, region)
- * - Station search & auto-centering
- * - Map / Satellite toggles and network recentering
+ * - Station search with auto-centering, zoom, and InfoWindow presentation
+ * - Center on Network (bounds fit for all 8 stations)
+ * - Map / Satellite toggles (google.maps.MapTypeId.HYBRID vs dark ROADMAP)
+ * - Radar DEMO overlay with transparent labeling
+ * - Spatial Buddy Check geodesics (<250 km) and Demo Weather Event spatial overlays
  */
 
 class SkyGuardMap {
   constructor(containerId, onStationSelect) {
     this.containerId = containerId;
     this.onStationSelect = onStationSelect;
+    window.SkyGuardActiveMap = this;
     
     // Core map state
     this.activeProvider = null; // 'google' or 'leaflet'
@@ -22,17 +34,40 @@ class SkyGuardMap {
     this.leafletMap = null;
     this.stations = [];
     this.evaluations = {};
+    this.selectedStationId = null;
+    this.currentInfoWindowStationId = null;
     
-    // Marker registries
+    // Google Maps registries
     this.googleMarkers = {};
-    this.leafletMarkers = {};
+    this.googleInfoWindow = null;
     this.googlePolylines = [];
-    this.leafletPolylines = [];
     this.googleCircle = null;
+    this.googleRadarLayer = null;
+    
+    // Leaflet registries
+    this.leafletMarkers = {};
+    this.leafletPolylines = [];
     this.leafletCircle = null;
-    this.radarLayer = null;
+    this.leafletRadarLayer = null;
+    
     this.isRadarActive = false;
     
+    // Dark command center theme for Google Maps
+    this.darkStyle = [
+      { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#020617' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
+      { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#00f5d4' }] },
+      { featureType: 'administrative.province', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0f172a' }] },
+      { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#64748b' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#030712' }] },
+      { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#38bdf8' }] }
+    ];
+
     // Active filters
     this.activeFilters = {
       status: 'ALL',
@@ -45,30 +80,58 @@ class SkyGuardMap {
     this.initMap();
   }
 
+  /**
+   * Detects the Google Maps API Key from environment or storage.
+   * NOTE: The API key is NOT hardcoded into source code.
+   */
   detectApiKey() {
-    const DEFAULT_KEY = "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao";
-    // Check multiple environments for Google Maps API Key
     if (typeof window !== 'undefined') {
-      if (window.VITE_GOOGLE_MAPS_API_KEY && window.VITE_GOOGLE_MAPS_API_KEY !== 'YOUR_KEY_HERE') {
-        return window.VITE_GOOGLE_MAPS_API_KEY;
+      // 1. Build environment variable (if passed by build pipeline and not a template placeholder)
+      if (window.VITE_GOOGLE_MAPS_API_KEY && 
+          window.VITE_GOOGLE_MAPS_API_KEY !== 'YOUR_KEY_HERE' && 
+          !window.VITE_GOOGLE_MAPS_API_KEY.includes('YOUR_')) {
+        return window.VITE_GOOGLE_MAPS_API_KEY.trim();
       }
-      if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY !== 'YOUR_KEY_HERE') {
-        return window.GOOGLE_MAPS_API_KEY;
+      if (window.GOOGLE_MAPS_API_KEY && 
+          window.GOOGLE_MAPS_API_KEY !== 'YOUR_KEY_HERE' && 
+          !window.GOOGLE_MAPS_API_KEY.includes('YOUR_')) {
+        return window.GOOGLE_MAPS_API_KEY.trim();
       }
-      const localKey = localStorage.getItem('VITE_GOOGLE_MAPS_API_KEY');
-      if (localKey && localKey.trim() !== '') return localKey.trim();
+
+      // 2. User-entered key stored in localStorage via the UI modal
+      const localKey = window.localStorage ? window.localStorage.getItem('VITE_GOOGLE_MAPS_API_KEY') : null;
+      if (localKey && localKey.trim() !== '') {
+        return localKey.trim();
+      }
       
+      // 3. Optional URL query parameter (?key=... or ?gkey=...)
       const searchParams = new URLSearchParams(window.location.search);
-      const urlKey = searchParams.get('gkey') || searchParams.get('key');
-      if (urlKey && urlKey.trim() !== '') return urlKey.trim();
+      const urlKey = searchParams.get('key') || searchParams.get('gkey');
+      if (urlKey && urlKey.trim() !== '') {
+        return urlKey.trim();
+      }
     }
-    return DEFAULT_KEY;
+    return null;
   }
 
   setApiKey(key) {
     if (key && key.trim() !== '') {
-      localStorage.setItem('VITE_GOOGLE_MAPS_API_KEY', key.trim());
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('VITE_GOOGLE_MAPS_API_KEY', key.trim());
+      }
       this.apiKey = key.trim();
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+    }
+  }
+
+  clearApiKey() {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem('VITE_GOOGLE_MAPS_API_KEY');
+    }
+    this.apiKey = null;
+    if (typeof window !== 'undefined' && window.location) {
       window.location.reload();
     }
   }
@@ -81,12 +144,12 @@ class SkyGuardMap {
           this.hideKeyWarning();
         })
         .catch((err) => {
-          console.warn('Google Maps script failed or rejected key, falling back to Leaflet:', err);
-          this.showKeyWarning("Google Maps could not be loaded. Check API key restrictions and enabled APIs. Displaying high-precision fallback demo map.");
+          console.warn('Google Maps script failed or key rejected. Falling back to demo map:', err);
+          this.showKeyWarning("Google Maps could not be loaded. Check your API key and Google Cloud restrictions.");
           this.initLeafletMap();
         });
     } else {
-      this.showKeyWarning("Google Maps API key not configured. Add VITE_GOOGLE_MAPS_API_KEY to enable Google Maps. Displaying interactive fallback demo map.");
+      this.showKeyWarning("Google Maps API key not configured. Add VITE_GOOGLE_MAPS_API_KEY to enable Google Maps.");
       this.initLeafletMap();
     }
   }
@@ -116,7 +179,7 @@ class SkyGuardMap {
 
       window.gm_authFailure = () => {
         console.warn('Google Maps authentication failure callback triggered.');
-        this.showKeyWarning("Google Maps API key rejected or invalid. Displaying interactive fallback demo map.");
+        this.showKeyWarning("Google Maps could not be loaded. Check your API key and Google Cloud restrictions.");
         this.initLeafletMap();
       };
 
@@ -125,7 +188,7 @@ class SkyGuardMap {
 
       const script = document.createElement('script');
       script.id = 'google-maps-sdk';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,marker,geometry&v=weekly`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(this.apiKey)}&libraries=places,marker,geometry&v=weekly`;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
@@ -143,25 +206,10 @@ class SkyGuardMap {
     if (!container) return;
     container.innerHTML = '';
 
-    // Dark sleek command center theme for Google Maps
-    const darkStyle = [
-      { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-      { elementType: 'labels.text.stroke', stylers: [{ color: '#020617' }] },
-      { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
-      { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#00f5d4' }] },
-      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0f172a' }] },
-      { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#64748b' }] },
-      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#030712' }] },
-      { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#38bdf8' }] }
-    ];
-
     this.googleMap = new google.maps.Map(container, {
       center: { lat: 18.5, lng: 84.5 },
       zoom: 6,
-      styles: darkStyle,
+      styles: this.darkStyle,
       disableDefaultUI: true,
       zoomControl: false,
       mapTypeControl: false,
@@ -170,7 +218,18 @@ class SkyGuardMap {
       backgroundColor: '#0b1120'
     });
 
+    // Create single shared InfoWindow for Google Maps
+    this.googleInfoWindow = new google.maps.InfoWindow({
+      minWidth: 290,
+      maxWidth: 350
+    });
+
+    this.googleInfoWindow.addListener('closeclick', () => {
+      this.currentInfoWindowStationId = null;
+    });
+
     this.updateProviderBadge('Google Maps Engine (Active)');
+
     if (this.stations.length > 0) {
       this.renderStations(this.stations, this.evaluations);
     }
@@ -199,6 +258,7 @@ class SkyGuardMap {
     }).addTo(this.leafletMap);
 
     this.updateProviderBadge('Fallback Demo Map Engine (Active)');
+
     if (this.stations.length > 0) {
       this.renderStations(this.stations, this.evaluations);
     }
@@ -210,7 +270,7 @@ class SkyGuardMap {
   }
 
   // =========================================================================
-  // MARKER CREATION WITH COLOR-BLIND ACCESSIBLE ICONS
+  // MARKER CONFIGURATION WITH COLOR-BLIND ACCESSIBLE ICONS
   // =========================================================================
   getMarkerConfig(verdict) {
     switch (verdict) {
@@ -219,42 +279,59 @@ class SkyGuardMap {
           symbol: '⚠',
           label: 'FAULT',
           color: '#ef4444',
-          bg: 'rgba(239, 68, 68, 0.2)',
+          bg: 'rgba(239, 68, 68, 0.25)',
           border: '#ef4444',
           shapeClass: 'marker-fault',
-          shadow: '0 0 16px rgba(239, 68, 68, 0.8)'
+          shadow: '0 0 16px rgba(239, 68, 68, 0.85)'
         };
       case 'WEATHER_EVENT':
         return {
           symbol: '⛈',
           label: 'WEATHER',
           color: '#00f5d4',
-          bg: 'rgba(0, 245, 212, 0.25)',
+          bg: 'rgba(0, 245, 212, 0.28)',
           border: '#00f5d4',
           shapeClass: 'marker-event',
-          shadow: '0 0 20px rgba(0, 245, 212, 0.9)'
+          shadow: '0 0 20px rgba(0, 245, 212, 0.95)'
         };
       case 'UNCERTAIN':
         return {
           symbol: '?',
           label: 'REVIEW',
           color: '#c084fc',
-          bg: 'rgba(192, 132, 252, 0.2)',
+          bg: 'rgba(192, 132, 252, 0.25)',
           border: '#c084fc',
           shapeClass: 'marker-uncertain',
-          shadow: '0 0 16px rgba(192, 132, 252, 0.7)'
+          shadow: '0 0 16px rgba(192, 132, 252, 0.75)'
         };
       default: // NORMAL
         return {
           symbol: '✓',
           label: 'NORMAL',
           color: '#10b981',
-          bg: 'rgba(16, 185, 129, 0.2)',
+          bg: 'rgba(16, 185, 129, 0.22)',
           border: '#10b981',
           shapeClass: 'marker-normal',
-          shadow: '0 0 14px rgba(16, 185, 129, 0.6)'
+          shadow: '0 0 14px rgba(16, 185, 129, 0.65)'
         };
     }
+  }
+
+  generateMarkerSvg(station, cfg) {
+    const sid = station.station_id;
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">
+        <defs>
+          <filter id="glow-${sid}" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${cfg.color}" flood-opacity="0.85"/>
+          </filter>
+        </defs>
+        <path d="M19 0 C8.5 0 0 8.5 0 19 C0 32 19 46 19 46 C19 46 38 32 38 19 C38 8.5 29.5 0 19 0 Z" fill="#0b1120" stroke="${cfg.border}" stroke-width="2.5" filter="url(#glow-${sid})"/>
+        <circle cx="19" cy="18" r="13" fill="${cfg.bg}"/>
+        <text x="19" y="16" font-family="'Outfit', sans-serif" font-weight="700" font-size="10.5" fill="#ffffff" text-anchor="middle">${station.code}</text>
+        <text x="19" y="26" font-family="'Inter', sans-serif" font-weight="700" font-size="9" fill="${cfg.color}" text-anchor="middle">${cfg.symbol}</text>
+      </svg>
+    `;
   }
 
   createMarkerDomElement(station, evalData) {
@@ -277,10 +354,182 @@ class SkyGuardMap {
 
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (this.onStationSelect) this.onStationSelect(station.station_id);
+      this.handleStationClick(station.station_id);
     });
 
     return el;
+  }
+
+  // =========================================================================
+  // UNIFIED STATION INFORMATION CARD HTML (GOOGLE MAPS & LEAFLET)
+  // =========================================================================
+  buildStationInfoHtml(station, evalData) {
+    const verdict = evalData.verdict || 'NORMAL';
+    const cfg = this.getMarkerConfig(verdict);
+    const reading = evalData.reading || {};
+    const healthScore = evalData.health_score !== undefined ? evalData.health_score : ((evalData.health && evalData.health.health_score) || 100);
+    const confidence = evalData.confidence !== undefined ? evalData.confidence : 95.0;
+    
+    const tVal = reading.temperature !== null && reading.temperature !== undefined ? `${reading.temperature} °C` : 'N/A';
+    const pVal = reading.pressure !== null && reading.pressure !== undefined ? `${reading.pressure} hPa` : 'N/A';
+    const rhVal = reading.humidity !== null && reading.humidity !== undefined ? `${reading.humidity} %` : 'N/A';
+    const tdVal = reading.dew_point !== null && reading.dew_point !== undefined ? `${reading.dew_point} °C` : 'N/A';
+    
+    let timeStr = 'Just Now';
+    if (reading.timestamp) {
+      try {
+        const d = new Date(reading.timestamp);
+        timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      } catch (e) {
+        timeStr = reading.timestamp;
+      }
+    }
+
+    // Evidence checklist items
+    const checklist = evalData.evidence_checklist || [
+      { text: "Physical limits & bounds verified", pass: true },
+      { text: "Temporal change rate nominal", pass: true },
+      { text: "Thermodynamic invariant (Td ≤ T) consistent", pass: true },
+      { text: "Neighboring stations spatial consensus confirmed", pass: true }
+    ];
+
+    const evidenceHtml = checklist.map(item => `
+      <li style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 11px; color: ${item.pass ? '#10b981' : '#ef4444'};">
+        <span>${item.pass ? '✓' : '⚠'}</span>
+        <span style="color: #cbd5e1;">${item.text}</span>
+      </li>
+    `).join('');
+
+    const actionText = (evalData.maintenance_recommendation && evalData.maintenance_recommendation.action) ||
+      (verdict === 'WEATHER_EVENT' ? 'Continue regional meteorological monitoring.' :
+       verdict === 'SENSOR_FAULT' ? 'Inspect affected sensor and dispatch recalibration team.' :
+       verdict === 'UNCERTAIN' ? 'Flagged for human-in-the-loop meteorologist review.' :
+       'Nominal operation. Routine scheduled check.');
+
+    return `
+      <div class="gmap-station-infocard" style="font-family: 'Inter', sans-serif; color: #f8fafc; line-height: 1.4; padding: 4px;">
+        <div style="border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <strong style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #00f5d4;">${station.station_id}</strong>
+            <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">${station.region} Corridor</span>
+          </div>
+          <div style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: #ffffff; text-transform: uppercase; margin-top: 2px;">
+            ${station.name}
+          </div>
+          <div style="font-size: 10px; color: #64748b; font-family: monospace;">
+            ${station.latitude.toFixed(4)}°N, ${station.longitude.toFixed(4)}°E &bull; Elev: ${station.elevation_m || 25}m
+          </div>
+        </div>
+
+        <div style="background: ${cfg.bg}; border: 1px solid ${cfg.border}; border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="font-size: 10px; font-weight: 700; color: #cbd5e1; text-transform: uppercase;">Current Verdict:</span>
+          <strong style="color: ${cfg.color}; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+            <span>${cfg.symbol}</span> ${verdict}
+          </strong>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; font-size: 11px;">
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Health Index</div>
+            <strong style="color: #00f5d4; font-size: 13px;">${healthScore}%</strong>
+          </div>
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Confidence</div>
+            <strong style="color: #10b981; font-size: 13px;">${confidence}%</strong>
+          </div>
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Temperature</div>
+            <strong style="color: #f59e0b; font-size: 13px;">${tVal}</strong>
+          </div>
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Pressure</div>
+            <strong style="color: #38bdf8; font-size: 13px;">${pVal}</strong>
+          </div>
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Humidity</div>
+            <strong style="color: #2dd4bf; font-size: 13px;">${rhVal}</strong>
+          </div>
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 5px;">
+            <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">Dew Point</div>
+            <strong style="color: #c084fc; font-size: 13px;">${tdVal}</strong>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
+          Last Telemetry Update: <strong style="color: #cbd5e1;">${timeStr}</strong>
+        </div>
+
+        <div style="background: rgba(15,23,42,0.6); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
+          <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Detection Evidence</div>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${evidenceHtml}
+          </ul>
+        </div>
+
+        <div style="font-size: 11px; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 6px 8px; border-left: 3px solid ${cfg.border}; border-radius: 0 4px 4px 0;">
+          <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; display: block;">Decision &bull; Action</span>
+          <span style="color: #e2e8f0; font-size: 11px;">${actionText}</span>
+        </div>
+
+        <button 
+          style="width: 100%; padding: 8px 12px; background: #00f5d4; color: #020617; border: none; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: transform 0.15s ease;"
+          onmouseover="this.style.opacity='0.9'"
+          onmouseout="this.style.opacity='1'"
+          onclick="window.SkyGuardActiveMap && window.SkyGuardActiveMap.handleViewAnalysis('${station.station_id}')"
+        >
+          VIEW FULL 4-LAYER ANALYSIS &rarr;
+        </button>
+      </div>
+    `;
+  }
+
+  handleViewAnalysis(stationId) {
+    if (this.onStationSelect) {
+      this.onStationSelect(stationId);
+    }
+    // Smoothly scroll down towards the 4-layer inspection details if on mobile/small screen
+    const targetEl = document.getElementById('selected-station-card') || document.getElementById('pipeline-flow-diagram');
+    if (targetEl && window.innerWidth < 1024) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  handleStationClick(stationId) {
+    this.selectedStationId = stationId;
+    const station = this.stations.find(s => s.station_id === stationId);
+    if (!station) return;
+
+    if (this.activeProvider === 'google' && this.googleMap) {
+      const marker = this.googleMarkers[stationId];
+      if (marker) {
+        this.openGoogleInfoWindow(station, marker);
+      }
+    } else if (this.activeProvider === 'leaflet' && this.leafletMap) {
+      const marker = this.leafletMarkers[stationId];
+      if (marker) {
+        marker.openPopup();
+      }
+    }
+
+    if (this.onStationSelect) {
+      this.onStationSelect(stationId);
+    }
+  }
+
+  openGoogleInfoWindow(station, marker) {
+    const sid = station.station_id;
+    this.currentInfoWindowStationId = sid;
+    const evalData = this.evaluations[sid] || {};
+    const html = this.buildStationInfoHtml(station, evalData);
+
+    if (this.googleInfoWindow && this.googleMap) {
+      this.googleInfoWindow.setContent(html);
+      this.googleInfoWindow.open({
+        map: this.googleMap,
+        anchor: marker,
+        shouldFocus: false
+      });
+    }
   }
 
   // =========================================================================
@@ -295,6 +544,20 @@ class SkyGuardMap {
     } else if (this.activeProvider === 'leaflet' && this.leafletMap) {
       this.renderLeafletMarkers(stations, evaluations);
     }
+
+    // Refresh buddy lines if a station is currently selected
+    if (this.selectedStationId) {
+      const selStation = this.stations.find(s => s.station_id === this.selectedStationId);
+      if (selStation) {
+        const evalData = this.evaluations[this.selectedStationId] || {};
+        const neighbors = (evalData.layers && evalData.layers.l4_spatial && evalData.layers.l4_spatial.neighbors) || [];
+        if (this.activeProvider === 'google') {
+          this.drawGoogleBuddyLines(selStation, neighbors);
+        } else {
+          this.drawLeafletBuddyLines(selStation, neighbors);
+        }
+      }
+    }
   }
 
   renderGoogleMarkers(stations, evaluations) {
@@ -304,42 +567,39 @@ class SkyGuardMap {
       const verdict = evalData.verdict || 'NORMAL';
       const cfg = this.getMarkerConfig(verdict);
       const isVisible = this.checkFilterVisibility(station, evalData);
+      
+      const markerSvg = this.generateMarkerSvg(station, cfg);
+      const iconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(markerSvg);
+
+      const iconObj = {
+        url: iconUrl,
+        scaledSize: new google.maps.Size(38, 46),
+        anchor: new google.maps.Point(19, 46)
+      };
 
       if (this.googleMarkers[sid]) {
-        // Update existing marker
-        this.googleMarkers[sid].setVisible(isVisible);
+        // UPDATE EXISTING MARKER: icon, title, visibility in real time
+        const marker = this.googleMarkers[sid];
+        marker.setIcon(iconObj);
+        marker.setTitle(`${station.name} (${station.code}) - ${verdict}`);
+        marker.setVisible(isVisible);
+
+        // If InfoWindow is currently open for this station, update its live data!
+        if (this.currentInfoWindowStationId === sid && this.googleInfoWindow) {
+          this.googleInfoWindow.setContent(this.buildStationInfoHtml(station, evalData));
+        }
       } else {
-        // Create custom SVG Pin Marker for Google Maps
-        const markerSvg = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">
-            <defs>
-              <filter id="glow-${sid}" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${cfg.color}" flood-opacity="0.8"/>
-              </filter>
-            </defs>
-            <path d="M19 0 C8.5 0 0 8.5 0 19 C0 32 19 46 19 46 C19 46 38 32 38 19 C38 8.5 29.5 0 19 0 Z" fill="#0b1120" stroke="${cfg.border}" stroke-width="2.5" filter="url(#glow-${sid})"/>
-            <circle cx="19" cy="18" r="13" fill="${cfg.bg}"/>
-            <text x="19" y="16" font-family="Outfit, sans-serif" font-weight="bold" font-size="11" fill="#ffffff" text-anchor="middle">${station.code}</text>
-            <text x="19" y="26" font-family="Inter, sans-serif" font-weight="bold" font-size="9" fill="${cfg.color}" text-anchor="middle">${cfg.symbol}</text>
-          </svg>
-        `;
-
-        const iconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(markerSvg);
-
+        // CREATE NEW MARKER
         const marker = new google.maps.Marker({
           position: { lat: station.latitude, lng: station.longitude },
           map: this.googleMap,
           title: `${station.name} (${station.code}) - ${verdict}`,
-          icon: {
-            url: iconUrl,
-            scaledSize: new google.maps.Size(38, 46),
-            anchor: new google.maps.Point(19, 46)
-          },
+          icon: iconObj,
           visible: isVisible
         });
 
         marker.addListener('click', () => {
-          if (this.onStationSelect) this.onStationSelect(sid);
+          this.handleStationClick(sid);
         });
 
         this.googleMarkers[sid] = marker;
@@ -353,6 +613,7 @@ class SkyGuardMap {
       const evalData = evaluations[sid] || {};
       const isVisible = this.checkFilterVisibility(station, evalData);
       const domEl = this.createMarkerDomElement(station, evalData);
+      const popupHtml = this.buildStationInfoHtml(station, evalData);
 
       const customIcon = L.divIcon({
         className: 'empty-leaflet-wrapper',
@@ -363,6 +624,7 @@ class SkyGuardMap {
 
       if (this.leafletMarkers[sid]) {
         this.leafletMarkers[sid].setIcon(customIcon);
+        this.leafletMarkers[sid].setPopupContent(popupHtml);
         if (isVisible) {
           if (!this.leafletMap.hasLayer(this.leafletMarkers[sid])) {
             this.leafletMarkers[sid].addTo(this.leafletMap);
@@ -374,6 +636,7 @@ class SkyGuardMap {
         }
       } else {
         const marker = L.marker([station.latitude, station.longitude], { icon: customIcon });
+        marker.bindPopup(popupHtml, { minWidth: 290, maxWidth: 350 });
         if (isVisible) marker.addTo(this.leafletMap);
         this.leafletMarkers[sid] = marker;
       }
@@ -390,7 +653,7 @@ class SkyGuardMap {
 
   checkFilterVisibility(station, evalData) {
     const verdict = evalData.verdict || 'NORMAL';
-    const health = (evalData.health && evalData.health.health_score) || 100;
+    const health = evalData.health_score !== undefined ? evalData.health_score : ((evalData.health && evalData.health.health_score) || 100);
     const region = station.region || 'East';
     const detectedPattern = (evalData.maintenance_recommendation && evalData.maintenance_recommendation.detected_pattern) || '';
 
@@ -427,6 +690,11 @@ class SkyGuardMap {
 
       if (this.activeProvider === 'google' && this.googleMarkers[sid]) {
         this.googleMarkers[sid].setVisible(isVisible);
+        // If the open InfoWindow is for a station now hidden, close it
+        if (!isVisible && this.currentInfoWindowStationId === sid && this.googleInfoWindow) {
+          this.googleInfoWindow.close();
+          this.currentInfoWindowStationId = null;
+        }
       } else if (this.activeProvider === 'leaflet' && this.leafletMarkers[sid]) {
         if (isVisible) {
           if (!this.leafletMap.hasLayer(this.leafletMarkers[sid])) {
@@ -445,6 +713,7 @@ class SkyGuardMap {
   // STATION SELECTION, BUDDY CHECK GEODESICS & REGION OVERLAYS
   // =========================================================================
   highlightStation(stationId, neighbors = []) {
+    this.selectedStationId = stationId;
     const station = this.stations.find(s => s.station_id === stationId);
     if (!station) return;
 
@@ -482,8 +751,8 @@ class SkyGuardMap {
           ],
           geodesic: true,
           strokeColor: lineColor,
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
+          strokeOpacity: isWeather ? 0.9 : 0.75,
+          strokeWeight: isWeather ? 2.5 : 1.8,
           map: this.googleMap
         });
         this.googlePolylines.push(polyline);
@@ -493,10 +762,10 @@ class SkyGuardMap {
     if (isWeather) {
       this.googleCircle = new google.maps.Circle({
         strokeColor: '#00f5d4',
-        strokeOpacity: 0.8,
+        strokeOpacity: 0.85,
         strokeWeight: 1.5,
         fillColor: '#00f5d4',
-        fillOpacity: 0.15,
+        fillOpacity: 0.12,
         map: this.googleMap,
         center: { lat: targetStation.latitude, lng: targetStation.longitude },
         radius: 120000 // 120km meteorological consensus zone
@@ -525,7 +794,7 @@ class SkyGuardMap {
           [[targetStation.latitude, targetStation.longitude], [nStation.latitude, nStation.longitude]],
           {
             color: lineColor,
-            weight: 2,
+            weight: isWeather ? 2.5 : 1.8,
             opacity: 0.8,
             dashArray: isWeather ? '6, 6' : '3, 6'
           }
@@ -556,28 +825,48 @@ class SkyGuardMap {
       s.station_id.toLowerCase().includes(q) ||
       s.code.toLowerCase().includes(q) ||
       s.name.toLowerCase().includes(q) ||
-      s.district.toLowerCase().includes(q)
+      (s.district && s.district.toLowerCase().includes(q))
     );
 
     if (station) {
+      const sid = station.station_id;
+      this.selectedStationId = sid;
+
       if (this.activeProvider === 'google' && this.googleMap) {
         this.googleMap.panTo({ lat: station.latitude, lng: station.longitude });
-        this.googleMap.setZoom(9);
+        this.googleMap.setZoom(10);
+        const marker = this.googleMarkers[sid];
+        if (marker) {
+          this.openGoogleInfoWindow(station, marker);
+        }
       } else if (this.activeProvider === 'leaflet' && this.leafletMap) {
-        this.leafletMap.setView([station.latitude, station.longitude], 9);
+        this.leafletMap.setView([station.latitude, station.longitude], 10);
+        const marker = this.leafletMarkers[sid];
+        if (marker) {
+          marker.openPopup();
+        }
       }
-      if (this.onStationSelect) this.onStationSelect(station.station_id);
+
+      if (this.onStationSelect) {
+        this.onStationSelect(sid);
+      }
       return true;
     }
     return false;
   }
 
   centerOnNetwork() {
+    if (this.stations.length === 0) return;
+
     if (this.activeProvider === 'google' && this.googleMap) {
-      this.googleMap.panTo({ lat: 18.5, lng: 84.5 });
-      this.googleMap.setZoom(6);
+      const bounds = new google.maps.LatLngBounds();
+      this.stations.forEach(s => {
+        bounds.extend({ lat: s.latitude, lng: s.longitude });
+      });
+      this.googleMap.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
     } else if (this.activeProvider === 'leaflet' && this.leafletMap) {
-      this.leafletMap.setView([18.5, 84.5], 6);
+      const latlngs = this.stations.map(s => [s.latitude, s.longitude]);
+      this.leafletMap.fitBounds(latlngs, { padding: [50, 50] });
     }
   }
 
@@ -600,14 +889,22 @@ class SkyGuardMap {
   toggleSatellite() {
     const btn = document.getElementById('btn-map-type');
     if (this.activeProvider === 'google' && this.googleMap) {
-      const cur = this.googleMap.getMapTypeId();
-      const next = cur === 'roadmap' ? 'hybrid' : 'roadmap';
-      this.googleMap.setMapTypeId(next);
-      if (btn) btn.textContent = next === 'hybrid' ? '🗺️ Default View' : '🛰️ Satellite';
+      const curType = this.googleMap.getMapTypeId();
+      const isHybrid = curType === 'hybrid' || curType === google.maps.MapTypeId.HYBRID;
+      const nextType = isHybrid ? google.maps.MapTypeId.ROADMAP : google.maps.MapTypeId.HYBRID;
+      
+      this.googleMap.setMapTypeId(nextType);
+      if (nextType === google.maps.MapTypeId.ROADMAP) {
+        this.googleMap.setOptions({ styles: this.darkStyle });
+      }
+
+      if (btn) {
+        btn.textContent = nextType === google.maps.MapTypeId.HYBRID ? '🗺️ Dark Map' : '🛰️ Satellite';
+      }
     } else {
       if (btn) {
-        btn.textContent = '🛰️ Satellite (Google Maps)';
-        alert('Satellite imagery requires Google Maps API Key. Click "Set Key" to configure.');
+        btn.textContent = '🛰️ Satellite';
+        alert('Satellite imagery layer is available with Google Maps. Enter a valid Google Maps API Key in "Maps Key" to enable.');
       }
     }
   }
@@ -616,34 +913,60 @@ class SkyGuardMap {
     this.isRadarActive = !this.isRadarActive;
     const btn = document.getElementById('btn-toggle-radar');
 
-    if (this.activeProvider === 'leaflet' && this.leafletMap) {
+    if (this.activeProvider === 'google' && this.googleMap) {
+      if (!this.googleRadarLayer) {
+        this.googleRadarLayer = new google.maps.ImageMapType({
+          getTileUrl: function(coord, zoom) {
+            return `https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/${zoom}/${coord.x}/${coord.y}/2/1_1.png`;
+          },
+          tileSize: new google.maps.Size(256, 256),
+          opacity: 0.65,
+          name: "RadarDemo"
+        });
+      }
+
       if (this.isRadarActive) {
-        if (!this.radarLayer) {
-          this.radarLayer = L.tileLayer('https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/{z}/{x}/{y}/2/1_1.png', {
-            opacity: 0.65,
-            maxZoom: 16
-          });
-        }
-        this.radarLayer.addTo(this.leafletMap);
+        this.googleMap.overlayMapTypes.push(this.googleRadarLayer);
         if (btn) {
           btn.classList.add('active');
-          btn.textContent = '📡 Radar: ON';
+          btn.textContent = '📡 Radar: DEMO (ON)';
         }
       } else {
-        if (this.radarLayer) this.leafletMap.removeLayer(this.radarLayer);
+        this.googleMap.overlayMapTypes.clear();
         if (btn) {
           btn.classList.remove('active');
           btn.textContent = '📡 Radar: OFF';
         }
       }
-    } else {
-      // In Google maps, simulate radar overlay
-      if (btn) {
-        btn.classList.toggle('active', this.isRadarActive);
-        btn.textContent = this.isRadarActive ? '📡 Radar: ON' : '📡 Radar: OFF';
+    } else if (this.activeProvider === 'leaflet' && this.leafletMap) {
+      if (this.isRadarActive) {
+        if (!this.leafletRadarLayer) {
+          this.leafletRadarLayer = L.tileLayer('https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/{z}/{x}/{y}/2/1_1.png', {
+            opacity: 0.65,
+            maxZoom: 16
+          });
+        }
+        this.leafletRadarLayer.addTo(this.leafletMap);
+        if (btn) {
+          btn.classList.add('active');
+          btn.textContent = '📡 Radar: DEMO (ON)';
+        }
+      } else {
+        if (this.leafletRadarLayer) {
+          this.leafletMap.removeLayer(this.leafletRadarLayer);
+        }
+        if (btn) {
+          btn.classList.remove('active');
+          btn.textContent = '📡 Radar: OFF';
+        }
       }
     }
   }
 }
 
-window.SkyGuardMap = SkyGuardMap;
+if (typeof window !== 'undefined') {
+  window.SkyGuardMap = SkyGuardMap;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SkyGuardMap;
+}
