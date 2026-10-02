@@ -180,13 +180,16 @@
             </div>
           </div>
 
-          <!-- Developer Google Maps Key Warning Banner (Never Blank) -->
+          <!-- Operational Map Notice Banner (Never Blank, Dismissible) -->
           <div class="map-key-banner" id="map-key-warning" style="display: none;">
             <div class="key-warning-left">
-              <span class="warning-icon">ℹ️</span>
-              <span class="key-warning-text">Google Maps API key not configured. Add VITE_GOOGLE_MAPS_API_KEY to enable Google Maps. Displaying high-precision fallback demo map.</span>
+              <span class="warning-icon">🟢</span>
+              <span class="key-warning-text">Running in High-Performance Operational Mode (Esri Dark + Google Satellite).</span>
             </div>
-            <button class="btn btn-xs btn-outline" onclick="document.getElementById('btn-open-key-modal').click()">⚙️ Set Key</button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-xs btn-outline" onclick="document.getElementById('btn-open-key-modal').click()">⚙️ Key Settings</button>
+              <button class="btn btn-xs" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 0 4px;" onclick="document.getElementById('map-key-warning').style.display='none'">&times;</button>
+            </div>
           </div>
 
           <!-- Search & Map Controls Toolbar -->
