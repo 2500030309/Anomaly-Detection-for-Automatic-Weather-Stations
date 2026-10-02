@@ -60,14 +60,15 @@ class TestSkyGuardAI(unittest.TestCase):
     def test_layer4_sensor_spike(self):
         """Test L4: isolated Sensor Spike on single station."""
         sim = AWSSimulator("data/sample_stations.json")
-        sim.inject_scenario("SPIKE", "AWS-OD-001")
+        target_id = sim.stations[0]["station_id"]
+        sim.inject_scenario("SPIKE", target_id)
         spike_readings = sim.tick()
         spike_eval = self.engine.analyze_station(
             sim.stations[0],
-            spike_readings["AWS-OD-001"],
+            spike_readings[target_id],
             sim.stations,
             spike_readings,
-            sim.history["AWS-OD-001"][:-1],
+            sim.history[target_id][:-1],
             sim.history
         )
         self.assertEqual(spike_eval["verdict"], "SENSOR_FAULT")
@@ -76,14 +77,15 @@ class TestSkyGuardAI(unittest.TestCase):
     def test_layer4_cyclone_weather_event(self):
         """Test L4: genuine Mesoscale Cyclone Event with spatial consensus."""
         sim = AWSSimulator("data/sample_stations.json")
+        target_id = sim.stations[0]["station_id"]
         sim.inject_scenario("CYCLONIC_EVENT")
         cyclone_readings = sim.tick()
         cyclone_eval = self.engine.analyze_station(
             sim.stations[0],
-            cyclone_readings["AWS-OD-001"],
+            cyclone_readings[target_id],
             sim.stations,
             cyclone_readings,
-            sim.history["AWS-OD-001"][:-1],
+            sim.history[target_id][:-1],
             sim.history
         )
         self.assertEqual(cyclone_eval["verdict"], "WEATHER_EVENT")

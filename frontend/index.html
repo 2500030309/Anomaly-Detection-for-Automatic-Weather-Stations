@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkyGuard AI | Real-Time Anomaly Detection & Self-Healing for AWS (SIH PS ID 26073)</title>
-  <meta name="description" content="AI/ML-Based Intelligent Anomaly Detection & Self-Healing for Automatic Weather Stations (AWS). Multi-layer physics, temporal LSTM, and spatial consensus engine.">
+  <title>SkyGuard AI | Weather Station Intelligence Command Center (SIH PS ID 26073)</title>
+  <meta name="description" content="Intelligent Real-Time Anomaly Detection & Quality Control for Automatic Weather Stations (AWS). Multi-layer physics, temporal ML, and spatial consensus engine.">
   
   <!-- Google Fonts: Outfit, Inter, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS for Fallback Demo Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   
   <!-- App Styles -->
@@ -19,7 +19,7 @@
 </head>
 <body class="dark-theme">
 
-  <!-- TOP APP HEADER -->
+  <!-- TOP COMMAND CENTER HEADER -->
   <header class="top-nav" id="top-nav">
     <div class="nav-brand">
       <div class="brand-logo-radar">
@@ -33,9 +33,11 @@
       <div class="brand-titles">
         <div class="brand-row">
           <h1 class="brand-title">SkyGuard <span class="highlight-ai">AI</span></h1>
-
+          <span class="badge-demo-mode" title="Station locations and telemetry shown here are simulated for demonstration unless explicitly marked as authorised data.">
+            ⚠️ DEMO MODE
+          </span>
         </div>
-        <p class="brand-subtitle">Real-Time Anomaly Detection, Explainable QC & Self-Healing for Automatic Weather Stations</p>
+        <p class="brand-subtitle">Intelligent Anomaly Detection & Quality Control for Automatic Weather Stations (AWS)</p>
       </div>
     </div>
 
@@ -43,27 +45,27 @@
     <nav class="nav-tabs-bar">
       <button class="nav-tab-btn active" data-view="live">
         <span class="tab-icon">📡</span>
-        <span>Live Command Center</span>
+        <span>Command Center</span>
       </button>
       <button class="nav-tab-btn" data-view="batch-csv">
         <span class="tab-icon">📂</span>
-        <span>Batch CSV QC & Imputer</span>
+        <span>Batch CSV QC</span>
       </button>
       <button class="nav-tab-btn" data-view="dispatch">
         <span class="tab-icon">🛠️</span>
-        <span>Field Dispatch Hub</span>
+        <span>Maintenance Hub</span>
       </button>
       <button class="nav-tab-btn" data-view="benchmarks">
         <span class="tab-icon">📊</span>
-        <span>Model Benchmarks & SLA</span>
+        <span>Benchmarks & SLA</span>
       </button>
     </nav>
 
     <!-- Real-time Controls & Status -->
     <div class="nav-controls">
-      <div class="stream-pill" id="stream-status-pill">
+      <div class="stream-pill" id="stream-status-pill" title="Network status: Simulated Demo AWS Network">
         <span class="live-dot" id="live-indicator"></span>
-        <span class="stream-label" id="stream-label">STREAM: CONNECTED</span>
+        <span class="stream-label" id="stream-label">DEMO NETWORK ONLINE</span>
       </div>
 
       <div class="time-clock-pill">
@@ -73,7 +75,10 @@
       </div>
 
       <div class="action-btn-group">
-        <button id="btn-toggle-play" class="btn btn-primary" title="Toggle Auto-Simulation (every 3 seconds = 15 min)">
+        <button id="btn-open-key-modal" class="btn btn-outline" title="Configure Google Maps API Key">
+          <span>🔑 Maps Key</span>
+        </button>
+        <button id="btn-toggle-play" class="btn btn-primary" title="Toggle Auto-Simulation stream (every 2.8s = +15 min)">
           <span id="play-icon">▶</span> <span id="play-text">Auto Stream</span>
         </button>
         <button id="btn-step-tick" class="btn btn-secondary" title="Advance simulation by 15 minutes">
@@ -97,31 +102,31 @@
           <span class="metric-num" id="stat-total-stations">8</span>
           <span class="metric-title">Active AWS Nodes</span>
         </div>
-        <div class="metric-sub">Coastal Odisha IMD Cluster</div>
+        <div class="metric-sub">Simulated Demo AWS Network</div>
       </div>
 
       <div class="metric-card normal-card" id="card-normal-aws">
         <div class="metric-icon">✅</div>
         <div class="metric-data">
-          <span class="metric-num text-success" id="stat-normal-count">8</span>
+          <span class="metric-num text-success" id="stat-normal-count">5</span>
           <span class="metric-title">Nominal Data (Pass)</span>
         </div>
-        <div class="metric-sub">QC Confirmed Clean</div>
+        <div class="metric-sub">QC Verified Clean</div>
       </div>
 
       <div class="metric-card fault-card" id="card-fault-aws">
         <div class="metric-icon">🚨</div>
         <div class="metric-data">
-          <span class="metric-num text-danger" id="stat-fault-count">0</span>
+          <span class="metric-num text-danger" id="stat-fault-count">1</span>
           <span class="metric-title">Sensor Faults</span>
         </div>
-        <div class="metric-sub">Self-Healed via Spatial IDW</div>
+        <div class="metric-sub">Isolated Hardware Failure</div>
       </div>
 
       <div class="metric-card event-card" id="card-event-aws">
         <div class="metric-icon">🌪️</div>
         <div class="metric-data">
-          <span class="metric-num text-warning" id="stat-event-count">0</span>
+          <span class="metric-num text-warning" id="stat-event-count">1</span>
           <span class="metric-title">Mesoscale Weather</span>
         </div>
         <div class="metric-sub">Spatial Consensus Verified</div>
@@ -130,125 +135,727 @@
       <div class="metric-card uncertain-card" id="card-uncertain-aws">
         <div class="metric-icon">❓</div>
         <div class="metric-data">
-          <span class="metric-num text-purple" id="stat-uncertain-count">0</span>
+          <span class="metric-num text-purple" id="stat-uncertain-count">1</span>
           <span class="metric-title">Flagged for Review</span>
         </div>
         <div class="metric-sub">Human-In-The-Loop</div>
       </div>
+
+      <div class="metric-card health-card" id="card-health-aws">
+        <div class="metric-icon">🛡️</div>
+        <div class="metric-data">
+          <span class="metric-num text-cyan" id="stat-avg-health">94.7%</span>
+          <span class="metric-title">Average Health</span>
+        </div>
+        <div class="metric-sub">Network Integrity Index</div>
+      </div>
+
+      <div class="metric-card anomaly-card" id="card-anomalies-today">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-data">
+          <span class="metric-num text-orange" id="stat-anomalies-today">3</span>
+          <span class="metric-title">Anomalies Today</span>
+        </div>
+        <div class="metric-sub">Arbitrated by 4-Layer QC</div>
+      </div>
     </section>
 
-    <!-- MAIN 3-COLUMN WORKSPACE -->
-    <main class="dashboard-grid" id="main-grid">
+    <!-- MAIN 65% / 35% COMMAND CENTER SPLIT VIEW -->
+    <main class="command-split-grid" id="main-grid">
 
-      <!-- LEFT COLUMN: MAP & STATION LIST -->
-      <aside class="col-left">
-        <!-- Geospatial Network Map -->
-        <div class="panel map-panel">
-          <div class="panel-header">
-            <div class="header-left">
+      <!-- LEFT COLUMN: LARGE MAP (65% WIDTH) -->
+      <section class="command-map-column">
+        <div class="panel map-command-panel">
+          <div class="map-command-header">
+            <div class="map-title-wrap">
               <span class="panel-icon">🗺️</span>
-              <h2 class="panel-title">IMD AWS Geospatial Network</h2>
+              <div>
+                <h2 class="map-main-title">AWS NETWORK INTELLIGENCE MAP</h2>
+                <p class="map-sub-title">Real-time station health, anomaly detection and weather-event intelligence</p>
+              </div>
             </div>
-            <button class="badge-mini btn-radar-toggle" id="btn-toggle-radar">📡 Radar: OFF</button>
+            <div class="map-header-badges">
+              <span class="badge-network-demo">SIMULATED DEMO AWS NETWORK</span>
+              <span class="badge-provider" id="map-provider-badge">Initializing Map Engine...</span>
+            </div>
           </div>
-          <div class="map-container" id="aws-map"></div>
-          <div class="map-legend">
-            <span class="legend-item"><span class="legend-dot normal"></span> Nominal</span>
-            <span class="legend-item"><span class="legend-dot fault"></span> Sensor Fault</span>
-            <span class="legend-item"><span class="legend-dot event"></span> Weather Event</span>
-            <span class="legend-item"><span class="legend-dot uncertain"></span> Uncertain</span>
+
+          <!-- Developer Google Maps Key Warning Banner (Never Blank) -->
+          <div class="map-key-banner" id="map-key-warning" style="display: none;">
+            <div class="key-warning-left">
+              <span class="warning-icon">ℹ️</span>
+              <span class="key-warning-text">Google Maps API key not configured. Add VITE_GOOGLE_MAPS_API_KEY to enable Google Maps. Displaying high-precision fallback demo map.</span>
+            </div>
+            <button class="btn btn-xs btn-outline" onclick="document.getElementById('btn-open-key-modal').click()">⚙️ Set Key</button>
+          </div>
+
+          <!-- Search & Map Controls Toolbar -->
+          <div class="map-toolbar">
+            <div class="map-search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="map-station-search" class="map-search-input" placeholder="Search AWS Station by ID (AWS-003), Name, or Location...">
+            </div>
+            <div class="map-controls-group">
+              <button class="map-ctl-btn" id="btn-map-zoom-in" title="Zoom In">+</button>
+              <button class="map-ctl-btn" id="btn-map-zoom-out" title="Zoom Out">&minus;</button>
+              <button class="map-ctl-btn" id="btn-center-network" title="Center on Demo Network">🎯 Center</button>
+              <button class="map-ctl-btn" id="btn-map-type" title="Toggle Satellite / Roadmap View">🛰️ Satellite</button>
+              <button class="map-ctl-btn" id="btn-toggle-radar" title="Toggle Doppler Precipitation Radar Mosaic">📡 Radar: OFF</button>
+            </div>
+          </div>
+
+          <!-- Map View Container with Relative Floating Filters Overlay -->
+          <div class="map-canvas-container">
+            <div class="map-viewport" id="aws-map"></div>
+
+            <!-- Floating Multi-Criteria Map Filters Panel -->
+            <div class="floating-filter-panel" id="floating-filter-panel">
+              <div class="filter-panel-header">
+                <span class="filter-title">⚡ FILTER STATIONS</span>
+              </div>
+              <div class="filter-section">
+                <span class="filter-label">Status:</span>
+                <div class="filter-checkbox-grid">
+                  <label class="filter-checkbox-label">
+                    <input type="checkbox" class="filter-status-cb" data-status="ALL" checked> All
+                  </label>
+                  <label class="filter-checkbox-label text-success">
+                    <input type="checkbox" class="filter-status-cb" data-status="NORMAL"> ✓ Normal
+                  </label>
+                  <label class="filter-checkbox-label text-danger">
+                    <input type="checkbox" class="filter-status-cb" data-status="SENSOR_FAULT"> ⚠ Fault
+                  </label>
+                  <label class="filter-checkbox-label text-cyan">
+                    <input type="checkbox" class="filter-status-cb" data-status="WEATHER_EVENT"> ⛈ Weather
+                  </label>
+                  <label class="filter-checkbox-label text-purple">
+                    <input type="checkbox" class="filter-status-cb" data-status="UNCERTAIN"> ? Review
+                  </label>
+                </div>
+              </div>
+
+              <div class="filter-section">
+                <span class="filter-label">Health Index:</span>
+                <div class="filter-pills-row">
+                  <button class="filter-health-pill active" data-health="ALL">All</button>
+                  <button class="filter-health-pill" data-health="90-100">90–100</button>
+                  <button class="filter-health-pill" data-health="70-89">70–89</button>
+                  <button class="filter-health-pill" data-health="<70">&lt;70</button>
+                </div>
+              </div>
+
+              <div class="filter-section">
+                <span class="filter-label">Anomaly Type:</span>
+                <select id="filter-anomaly-type" class="filter-dropdown">
+                  <option value="ALL">All Patterns</option>
+                  <option value="spike">Spike Anomaly</option>
+                  <option value="drift">Calibration Drift</option>
+                  <option value="stuck">Stuck / Flatline</option>
+                  <option value="dropout">Dropout / Null</option>
+                  <option value="physics">Physics Breach</option>
+                </select>
+              </div>
+
+              <div class="filter-section">
+                <span class="filter-label">Corridor / Region:</span>
+                <div class="filter-pills-row">
+                  <button class="filter-region-pill active" data-region="ALL">All</button>
+                  <button class="filter-region-pill" data-region="East">East</button>
+                  <button class="filter-region-pill" data-region="South">South</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color-Blind Accessible Map Legend -->
+          <div class="map-command-legend">
+            <span class="legend-chip"><span class="legend-icon normal">✓</span> NORMAL</span>
+            <span class="legend-chip"><span class="legend-icon fault">⚠</span> SENSOR FAULT</span>
+            <span class="legend-chip"><span class="legend-icon event">⛈</span> WEATHER EVENT</span>
+            <span class="legend-chip"><span class="legend-icon uncertain">?</span> UNCERTAIN</span>
+            <span class="legend-chip line-chip"><span class="legend-line buddy"></span> Spatial Buddy Link</span>
+            <span class="legend-chip line-chip"><span class="legend-circle weather"></span> Weather Consensus Zone</span>
           </div>
         </div>
 
-        <!-- Station Directory & Quick Switcher -->
-        <div class="panel station-list-panel">
+        <!-- Station Directory Drawer -->
+        <div class="panel station-directory-panel">
           <div class="panel-header">
             <div class="header-left">
               <span class="panel-icon">📋</span>
-              <h2 class="panel-title">Station Directory</h2>
+              <h3 class="panel-title">8 Simulated AWS Directory</h3>
             </div>
-            <input type="text" id="station-search" class="station-search-input" placeholder="Search station...">
+            <input type="text" id="station-search" class="station-search-input" placeholder="Quick filter station list...">
           </div>
           <div class="station-list" id="station-list-container"></div>
         </div>
+      </section>
+
+      <!-- RIGHT COLUMN: STATION INTELLIGENCE & RECENT EVENTS (35% WIDTH) -->
+      <aside class="command-intel-column">
+        <!-- Selected Station High-Tech Info Card -->
+        <div class="panel station-info-card" id="selected-station-hero">
+          <div class="info-card-header">
+            <div class="info-card-identity">
+              <span class="station-code-badge" id="hero-code">PRI</span>
+              <div>
+                <h3 class="info-card-name" id="hero-name">AWS-003 — PURI COASTAL AWS</h3>
+                <div class="info-card-coords" id="hero-coords">Lat: 19.8135°N | Lon: 85.8312°E | Elev: 8m</div>
+              </div>
+            </div>
+            <span class="hero-verdict-badge verdict-event" id="hero-verdict-badge">⛈ WEATHER EVENT</span>
+          </div>
+
+          <div class="info-card-body">
+            <!-- Health & Confidence Metrics -->
+            <div class="info-stats-grid">
+              <div class="info-stat-box">
+                <span class="info-stat-lbl">Health Index</span>
+                <span class="info-stat-num text-success" id="hero-health-score">94%</span>
+                <div class="health-bar-bg">
+                  <div class="health-bar-fill" id="hero-health-fill" style="width: 94%;"></div>
+                </div>
+              </div>
+              <div class="info-stat-box">
+                <span class="info-stat-lbl">Confidence</span>
+                <span class="info-stat-num text-cyan" id="hero-confidence-val">96.2%</span>
+                <div class="confidence-indicator">High Accuracy QC</div>
+              </div>
+            </div>
+
+            <!-- Current Telemetry Metrics -->
+            <div class="info-telemetry-grid">
+              <div class="telemetry-pill">
+                <span class="tel-lbl">Temperature</span>
+                <span class="tel-val" id="pill-temp">34.8</span>
+                <span class="tel-unit">°C</span>
+              </div>
+              <div class="telemetry-pill">
+                <span class="tel-lbl">Pressure</span>
+                <span class="tel-val" id="pill-pressure">1002.4</span>
+                <span class="tel-unit">hPa</span>
+              </div>
+              <div class="telemetry-pill">
+                <span class="tel-lbl">Humidity</span>
+                <span class="tel-val" id="pill-humidity">61.2</span>
+                <span class="tel-unit">%</span>
+              </div>
+              <div class="telemetry-pill">
+                <span class="tel-lbl">Dew Point (Td)</span>
+                <span class="tel-val" id="pill-dew-point">26.1</span>
+                <span class="tel-unit">°C</span>
+              </div>
+            </div>
+
+            <div class="update-timestamp-row">
+              <span>Last Telemetry Packet:</span>
+              <strong id="hero-last-update">14:32:08</strong>
+            </div>
+
+            <!-- Detection Evidence Checklist -->
+            <div class="evidence-box">
+              <span class="evidence-box-title">DETECTION EVIDENCE</span>
+              <div class="evidence-checklist" id="evidence-checklist-container">
+                <!-- Dynamically rendered checklist items with checkmarks -->
+              </div>
+            </div>
+
+            <!-- Decision & Recommended Action -->
+            <div class="decision-action-box">
+              <div class="decision-row">
+                <span class="da-label">DECISION:</span>
+                <span class="da-val text-cyan" id="info-card-decision">WEATHER EVENT</span>
+              </div>
+              <div class="action-row">
+                <span class="da-label">ACTION:</span>
+                <span class="da-val" id="info-card-action">Continue monitoring regional atmospheric trend.</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="btn-view-analysis">
+              <span>VIEW FULL 4-LAYER ANALYSIS &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Spatial Buddy Check Card -->
+        <div class="panel spatial-buddy-card">
+          <div class="panel-header">
+            <div class="header-left">
+              <span class="panel-icon">🌐</span>
+              <h3 class="panel-title">Spatial Buddy Check (L4 Consensus)</h3>
+            </div>
+            <span class="spatial-score-badge">
+              Consistency: <strong id="spatial-consistency-score" class="text-success">92%</strong>
+            </span>
+          </div>
+          <div class="buddy-card-body">
+            <div id="spatial-agreement-badge" class="status-tag tag-success">SPATIAL AGREEMENT DETECTED</div>
+            <div class="buddy-stations-list" id="spatial-buddy-container">
+              <!-- Dynamically rendered neighbors with km and agreement status -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Events Log -->
+        <div class="panel recent-events-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <span class="panel-icon">🕒</span>
+              <h3 class="panel-title">Recent Events Log</h3>
+            </div>
+            <span class="badge-mini">Real-Time Queue</span>
+          </div>
+          <div class="recent-events-list" id="recent-events-container">
+            <!-- Dynamically populated with 14:32 AWS-003, 14:28 AWS-007, etc. -->
+          </div>
+        </div>
       </aside>
+    </main>
 
-      <!-- CENTER COLUMN: TELEMETRY CHARTS & 4-LAYER INSPECTION -->
-      <section class="col-center">
-        <!-- Selected Station Header Details -->
-        <div class="station-hero-card" id="selected-station-hero">
-          <div class="hero-left">
-            <div class="hero-code-badge" id="hero-code">BBI</div>
-            <div>
-              <h2 class="hero-name" id="hero-name">Bhubaneswar Met Observatory</h2>
-              <div class="hero-coords" id="hero-coords">Lat: 20.2961°N | Lon: 85.8245°E | Elev: 45m | Dist: Khordha</div>
+    <!-- SECTION: "FAULT OR WEATHER?" (CENTRAL INTELLIGENCE CONCEPT) -->
+    <section class="section-container" id="section-fault-or-weather">
+      <div class="section-title-wrap">
+        <span class="section-tag">CENTRAL ARBITRATION CONCEPT</span>
+        <h2 class="section-heading">FAULT OR WEATHER?</h2>
+        <p class="section-subheading">
+          The core innovation of SkyGuard AI: Distinguishing sensor hardware degradation from genuine mesoscale weather extremes using multi-station evidence fusion.
+        </p>
+      </div>
+
+      <div class="fault-weather-grid">
+        <!-- Card 1: Sensor Fault Case -->
+        <div class="comparison-scenario-card fault-scenario-card" id="card-fault-case">
+          <div class="scenario-header">
+            <div class="scenario-badge badge-fault">⚠ SCENARIO 1: SENSOR FAULT</div>
+            <h3>Sudden Hardware Degradation</h3>
+          </div>
+          <div class="scenario-table-wrap">
+            <table class="scenario-table">
+              <tr>
+                <td>Temperature:</td>
+                <td><strong class="text-danger">29°C &rarr; 42°C sudden jump</strong></td>
+              </tr>
+              <tr>
+                <td>Neighbouring stations:</td>
+                <td><span class="text-success">Normal (No change in 250km radius)</span></td>
+              </tr>
+              <tr>
+                <td>Pressure:</td>
+                <td><span class="text-success">Normal (1011.5 hPa nominal tide)</span></td>
+              </tr>
+              <tr>
+                <td>Humidity:</td>
+                <td><span class="text-success">Normal (62% nominal)</span></td>
+              </tr>
+              <tr>
+                <td>Thermodynamic Physics:</td>
+                <td><strong class="text-danger">Inconsistent (Isolated spike)</strong></td>
+              </tr>
+              <tr class="verdict-row">
+                <td>FINAL VERDICT:</td>
+                <td><span class="verdict-tag tag-fault">🚨 SENSOR FAULT</span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="scenario-footer">
+            <p><strong>Arbitration Explanation:</strong> The target station diverges from its spatial neighborhood without corresponding pressure or humidity signals. Categorized as hardware failure.</p>
+            <button class="btn btn-secondary btn-sm" id="btn-test-fault-case">⚡ Simulate Sensor Spike</button>
+          </div>
+        </div>
+
+        <!-- Card 2: Weather Event Case -->
+        <div class="comparison-scenario-card weather-scenario-card" id="card-weather-case">
+          <div class="scenario-header">
+            <div class="scenario-badge badge-event">⛈ SCENARIO 2: WEATHER EVENT</div>
+            <h3>Authentic Mesoscale Atmospheric Extreme</h3>
+          </div>
+          <div class="scenario-table-wrap">
+            <table class="scenario-table">
+              <tr>
+                <td>Temperature:</td>
+                <td><strong class="text-warning">29°C &rarr; 36°C regional shift</strong></td>
+              </tr>
+              <tr>
+                <td>Neighbouring stations:</td>
+                <td><span class="text-cyan">Also increasing consistently</span></td>
+              </tr>
+              <tr>
+                <td>Humidity:</td>
+                <td><span class="text-cyan">Changing consistently with airmass</span></td>
+              </tr>
+              <tr>
+                <td>Pressure:</td>
+                <td><span class="text-cyan">Physically consistent gradient</span></td>
+              </tr>
+              <tr>
+                <td>Spatial Pattern:</td>
+                <td><strong class="text-success">Confirmed by Correlated AWS Nodes</strong></td>
+              </tr>
+              <tr class="verdict-row">
+                <td>FINAL VERDICT:</td>
+                <td><span class="verdict-tag tag-event">🌪️ WEATHER EVENT</span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="scenario-footer">
+            <p><strong>Arbitration Explanation:</strong> Surrounding AWS stations corroborate the atmospheric trajectory. Prevents false alarms during actual storms, cyclones, and heatwaves.</p>
+            <button class="btn btn-accent btn-sm" id="btn-test-weather-case">⚡ Simulate Cyclone / Weather Event</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: 4-LAYER QC PIPELINE VISUALIZER -->
+    <section class="section-container" id="section-qc-pipeline">
+      <div class="section-title-wrap">
+        <span class="section-tag">MULTI-STAGE ARBITRATION</span>
+        <h2 class="section-heading">4-Stage Consistency & QC Pipeline</h2>
+        <p class="section-subheading">Data passes through physical limits, temporal neural models, thermodynamic invariants, and spatial consensus.</p>
+      </div>
+
+      <!-- Pipeline Flow Nodes -->
+      <div class="pipeline-flow-diagram">
+        <div class="pipeline-node" id="layer-node-l1">
+          <div class="node-tag">L1</div>
+          <div class="node-content">
+            <h4>PHYSICAL & RULE QC</h4>
+            <p>WMO-No. 8 physical bounds, step envelope, and flatline detection</p>
+          </div>
+        </div>
+        <div class="pipeline-connector">&rarr;</div>
+
+        <div class="pipeline-node" id="layer-node-l2">
+          <div class="node-tag">L2</div>
+          <div class="node-content">
+            <h4>TEMPORAL ML</h4>
+            <p>Isolation Forest + Neural LSTM Autoencoder reconstruction</p>
+          </div>
+        </div>
+        <div class="pipeline-connector">&rarr;</div>
+
+        <div class="pipeline-node" id="layer-node-l3">
+          <div class="node-tag">L3</div>
+          <div class="node-content">
+            <h4>MULTIVARIATE PHYSICS</h4>
+            <p>Magnus-Tetens Dew Point invariant (Td &le; T) & depression</p>
+          </div>
+        </div>
+        <div class="pipeline-connector">&rarr;</div>
+
+        <div class="pipeline-node" id="layer-node-l4">
+          <div class="node-tag">L4</div>
+          <div class="node-content">
+            <h4>SPATIAL BUDDY CHECK</h4>
+            <p>Nearby AWS comparison within 250km correlation corridor</p>
+          </div>
+        </div>
+        <div class="pipeline-connector">&rarr;</div>
+
+        <div class="pipeline-node node-fusion" id="layer-node-fusion">
+          <div class="node-tag">FUSION</div>
+          <div class="node-content">
+            <h4>EVIDENCE FUSION</h4>
+            <p>Weighted arbitration of physical, temporal, and spatial vectors</p>
+          </div>
+        </div>
+        <div class="pipeline-connector">&rarr;</div>
+
+        <div class="pipeline-node node-verdict" id="layer-node-verdict">
+          <div class="node-tag">DECISION</div>
+          <div class="node-content">
+            <h4>FINAL VERDICT</h4>
+            <p>NORMAL | SENSOR FAULT | WEATHER EVENT | UNCERTAIN</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed 4-Layer Inspection Cards Grid -->
+      <div class="layers-grid">
+        <!-- Layer 1: Physical Rules -->
+        <div class="layer-card" id="layer1-card">
+          <div class="layer-card-header">
+            <div class="layer-title-wrap">
+              <span class="layer-tag">LAYER 1</span>
+              <h3 class="layer-name">Physical & Rule QC</h3>
+            </div>
+            <span class="layer-badge badge-pass" id="l1-badge">PASSED</span>
+          </div>
+          <div class="layer-body">
+            <p class="layer-desc">WMO physical bounds [-40, 60]°C, [870, 1080] hPa, rate-of-change, and stuck sensor flatline detection.</p>
+            <div class="layer-metric-row">
+              <span class="metric-key">Physical Bounds:</span>
+              <span class="metric-val text-success" id="l1-bounds-status">Within Envelope</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">15-Min Step Limit:</span>
+              <span class="metric-val text-success" id="l1-step-status">Within Delta Limits</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">Flatline Persistence:</span>
+              <span class="metric-val text-success" id="l1-flatline-status">Variance Nominal</span>
             </div>
           </div>
-          <div class="hero-right">
-            <div class="hero-verdict-container">
-              <span class="hero-verdict-badge verdict-normal" id="hero-verdict-badge">NORMAL</span>
-              <span class="hero-verdict-reason" id="hero-verdict-reason">All consistency checks satisfied.</span>
+          <div class="layer-footer" id="l1-footer">All L1 Physical & Rule checks passed.</div>
+        </div>
+
+        <!-- Layer 2: Temporal ML -->
+        <div class="layer-card" id="layer2-card">
+          <div class="layer-card-header">
+            <div class="layer-title-wrap">
+              <span class="layer-tag">LAYER 2</span>
+              <h3 class="layer-name">Temporal ML & LSTM Autoencoder</h3>
             </div>
-            <div class="hero-health-container">
-              <div class="health-gauge-text">
-                <span class="health-label">Health Index</span>
-                <span class="health-score" id="hero-health-score">100%</span>
+            <span class="layer-badge badge-pass" id="l2-badge">PASSED</span>
+          </div>
+          <div class="layer-body">
+            <p class="layer-desc">Isolation Forest score + Neural LSTM Autoencoder reconstruction loss (Malhotra et al. 2016).</p>
+            <div class="layer-metric-row">
+              <span class="metric-key">Isolation Forest Score:</span>
+              <span class="metric-val" id="l2-score">0.08 / 1.0</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">LSTM Reconstruction Loss:</span>
+              <span class="metric-val text-cyan" id="l2-lstm-loss">0.082 (Threshold: 0.45)</span>
+            </div>
+            <div class="anomaly-meter-bg">
+              <div class="anomaly-meter-fill" id="l2-score-bar" style="width: 14%;"></div>
+            </div>
+          </div>
+          <div class="layer-footer" id="l2-footer">Temporal dynamics nominal.</div>
+        </div>
+
+        <!-- Layer 3: Multivariate Physics -->
+        <div class="layer-card" id="layer3-card">
+          <div class="layer-card-header">
+            <div class="layer-title-wrap">
+              <span class="layer-tag">LAYER 3</span>
+              <h3 class="layer-name">Multivariate Physics</h3>
+            </div>
+            <span class="layer-badge badge-pass" id="l3-badge">PASSED</span>
+          </div>
+          <div class="layer-body">
+            <p class="layer-desc">Magnus-Tetens Dew Point ($T_d \le T$) and Clausius-Clapeyron thermodynamic consistency.</p>
+            <div class="layer-metric-row">
+              <span class="metric-key">Magnus Dew Point ($T_d$):</span>
+              <span class="metric-val text-cyan" id="l3-dew-point">26.1°C</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">Depression ($T - T_d$):</span>
+              <span class="metric-val text-success" id="l3-depression">8.7°C</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">Thermodynamic Invariant:</span>
+              <span class="metric-val text-success" id="l3-invariant-status">Valid ($T_d \le T$)</span>
+            </div>
+          </div>
+          <div class="layer-footer" id="l3-footer">Multivariate thermodynamics satisfied.</div>
+        </div>
+
+        <!-- Layer 4: Spatial Buddy Check -->
+        <div class="layer-card" id="layer4-card">
+          <div class="layer-card-header">
+            <div class="layer-title-wrap">
+              <span class="layer-tag">LAYER 4</span>
+              <h3 class="layer-name">Spatial Buddy Check</h3>
+            </div>
+            <span class="layer-badge badge-pass" id="l4-badge">PASSED</span>
+          </div>
+          <div class="layer-body">
+            <p class="layer-desc">Cross-station neighbor correlation. Differentiates isolated sensor faults from regional weather events.</p>
+            <div class="layer-metric-row">
+              <span class="metric-key">Neighbor AWS:</span>
+              <span class="metric-val" id="l4-neighbors-count">4 nodes (&le;250km)</span>
+            </div>
+            <div class="layer-metric-row">
+              <span class="metric-key">Spatial Consistency:</span>
+              <span class="metric-val text-success" id="l4-event-flag">Spatial Consensus Confirmed</span>
+            </div>
+          </div>
+          <div class="layer-footer" id="l4-footer">Spatial agreement confirmed across network.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: FEATURE EVIDENCE & DEMO INJECTION SANDBOX -->
+    <section class="section-container" id="section-feature-evidence-sandbox">
+      <div class="explainability-sandbox-grid">
+        <!-- Feature Evidence (Scientifically Credible Attribution) -->
+        <div class="panel feature-evidence-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <span class="panel-icon">💡</span>
+              <h3 class="panel-title">FEATURE EVIDENCE & ATTRIBUTION</h3>
+            </div>
+            <span class="badge-mini">Diagnostic Attribution</span>
+          </div>
+
+          <div class="evidence-body">
+            <!-- Feature Contribution Bars -->
+            <div class="attr-item">
+              <div class="attr-labels">
+                <span>Temperature Anomaly</span>
+                <span id="attr-temp-bar-val">12%</span>
               </div>
-              <div class="health-bar-bg">
-                <div class="health-bar-fill" id="hero-health-fill" style="width: 100%;"></div>
+              <div class="attr-bar-bg"><div class="attr-bar-fill bar-temp" id="attr-temp-bar" style="width: 12%;"></div></div>
+            </div>
+
+            <div class="attr-item">
+              <div class="attr-labels">
+                <span>Spatial Disagreement</span>
+                <span id="attr-spatial-bar-val">10%</span>
               </div>
+              <div class="attr-bar-bg"><div class="attr-bar-fill bar-spatial" id="attr-spatial-bar" style="width: 10%;"></div></div>
+            </div>
+
+            <div class="attr-item">
+              <div class="attr-labels">
+                <span>Pressure Inconsistency</span>
+                <span id="attr-pres-bar-val">14%</span>
+              </div>
+              <div class="attr-bar-bg"><div class="attr-bar-fill bar-pres" id="attr-pres-bar" style="width: 14%;"></div></div>
+            </div>
+
+            <div class="attr-item">
+              <div class="attr-labels">
+                <span>Humidity Inconsistency</span>
+                <span id="attr-rh-bar-val">15%</span>
+              </div>
+              <div class="attr-bar-bg"><div class="attr-bar-fill bar-rh" id="attr-rh-bar" style="width: 15%;"></div></div>
+            </div>
+
+            <div class="attr-item">
+              <div class="attr-labels">
+                <span>Temporal Deviation</span>
+                <span id="attr-temporal-bar-val">12%</span>
+              </div>
+              <div class="attr-bar-bg"><div class="attr-bar-fill bar-temporal" id="attr-temporal-bar" style="width: 12%;"></div></div>
+            </div>
+
+            <!-- "WHY THIS DECISION?" 5-second Judge Summary -->
+            <div class="why-decision-card">
+              <div class="why-card-header">
+                <span class="why-icon">🔍</span>
+                <h4>WHY THIS DECISION?</h4>
+              </div>
+              <p class="why-card-text" id="why-decision-text">
+                All sensor observations conform to WMO physical limits, diurnal cycles, and spatial consensus with neighboring AWS stations.
+              </p>
             </div>
           </div>
         </div>
 
-        <!-- Live Sensor Telemetry Cards (Current Values + Live Imputation) -->
-        <div class="sensor-cards-row">
-          <div class="sensor-pill-card" id="card-sensor-temp">
-            <div class="sensor-pill-header">
-              <span class="sensor-icon">🌡️</span>
-              <span class="sensor-name">Ambient Temperature</span>
-              <span class="healed-badge" id="healed-badge-temp" style="display: none;">HEALED</span>
+        <!-- Live Demo Simulation Sandbox -->
+        <div class="panel sandbox-panel">
+          <div class="panel-header">
+            <div class="header-left">
+              <span class="panel-icon">🧪</span>
+              <h3 class="panel-title">LIVE DEMO SIMULATION SANDBOX</h3>
             </div>
-            <div class="sensor-pill-body">
-              <span class="sensor-val" id="pill-temp">29.4</span>
-              <span class="sensor-unit">°C</span>
-            </div>
-            <div class="sensor-pill-footer" id="pill-temp-sub">Diurnal Cycle: Nominal</div>
+            <span class="badge-mini text-accent">Hackathon 90-Second Demo</span>
           </div>
 
-          <div class="sensor-pill-card" id="card-sensor-pres">
-            <div class="sensor-pill-header">
-              <span class="sensor-icon">⏲️</span>
-              <span class="sensor-name">Atmospheric Pressure</span>
-              <span class="healed-badge" id="healed-badge-pres" style="display: none;">HEALED</span>
-            </div>
-            <div class="sensor-pill-body">
-              <span class="sensor-val" id="pill-pressure">1008.2</span>
-              <span class="sensor-unit">hPa</span>
-            </div>
-            <div class="sensor-pill-footer" id="pill-pressure-sub">Semi-diurnal Tide: Stable</div>
-          </div>
+          <div class="sandbox-body">
+            <p class="sandbox-desc">
+              Trigger simulated anomalies to watch the 4-layer engine arbitrate, update the map, and output explainable verdicts:
+            </p>
 
-          <div class="sensor-pill-card" id="card-sensor-rh">
-            <div class="sensor-pill-header">
-              <span class="sensor-icon">💧</span>
-              <span class="sensor-name">Relative Humidity</span>
-              <span class="healed-badge" id="healed-badge-rh" style="display: none;">HEALED</span>
+            <div class="sandbox-buttons-grid">
+              <button class="btn-demo-scenario btn-green" onclick="injectScenario('NORMAL')">
+                <span class="scenario-icon">✓</span>
+                <div class="scenario-text">
+                  <strong>NORMAL</strong>
+                  <small>Nominal telemetry</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-red" onclick="injectScenario('SENSOR_SPIKE')">
+                <span class="scenario-icon">⚡</span>
+                <div class="scenario-text">
+                  <strong>SENSOR SPIKE</strong>
+                  <small>+16.5°C jump (Isolated)</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-amber" onclick="injectScenario('STUCK')">
+                <span class="scenario-icon">🧊</span>
+                <div class="scenario-text">
+                  <strong>STUCK / FLATLINE</strong>
+                  <small>Zero variance</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-orange" onclick="injectScenario('DRIFT')">
+                <span class="scenario-icon">📈</span>
+                <div class="scenario-text">
+                  <strong>CALIBRATION DRIFT</strong>
+                  <small>Gradual divergence</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-purple" onclick="injectScenario('PHYSICS_VIOLATION')">
+                <span class="scenario-icon">☢️</span>
+                <div class="scenario-text">
+                  <strong>PHYSICS BREACH</strong>
+                  <small>Td > T invariant breach</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-pink" onclick="injectScenario('HEATWAVE')">
+                <span class="scenario-icon">🔥</span>
+                <div class="scenario-text">
+                  <strong>HEATWAVE</strong>
+                  <small>Regional temp rise</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-cyan" onclick="injectScenario('CYCLONIC_EVENT')">
+                <span class="scenario-icon">🌪️</span>
+                <div class="scenario-text">
+                  <strong>CYCLONE-LIKE EVENT</strong>
+                  <small>Pressure plunge</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-gray" onclick="injectScenario('DROPOUT')">
+                <span class="scenario-icon">🚫</span>
+                <div class="scenario-text">
+                  <strong>COMM DROPOUT</strong>
+                  <small>Missing packet / NaN</small>
+                </div>
+              </button>
+
+              <button class="btn-demo-scenario btn-reset" onclick="injectScenario('RESET')">
+                <span class="scenario-icon">🔄</span>
+                <div class="scenario-text">
+                  <strong>RESET</strong>
+                  <small>Clear all injections</small>
+                </div>
+              </button>
             </div>
-            <div class="sensor-pill-body">
-              <span class="sensor-val" id="pill-humidity">68.5</span>
-              <span class="sensor-unit">%</span>
+
+            <!-- Custom Sensor Reading Test -->
+            <div class="manual-test-row">
+              <span class="manual-test-lbl">Manual Telemetry:</span>
+              <input type="number" id="manual-temp" placeholder="Temp °C" step="0.1">
+              <input type="number" id="manual-pres" placeholder="Pres hPa" step="0.1">
+              <input type="number" id="manual-rh" placeholder="RH %" step="1">
+              <button class="btn btn-secondary btn-sm" id="btn-submit-manual">Test</button>
             </div>
-            <div class="sensor-pill-footer" id="pill-humidity-sub">Magnus Td: 22.8°C</div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Time-Series Charts (History & Trends) -->
+    <!-- SECTION: TIME-SERIES CHART & PREDICTIVE MAINTENANCE RECOMMENDATION -->
+    <section class="section-container" id="section-chart-maintenance">
+      <div class="chart-maintenance-grid">
+        <!-- Multi-Sensor Telemetry Chart -->
         <div class="panel chart-panel">
           <div class="panel-header">
             <div class="header-left">
               <span class="panel-icon">📈</span>
-              <h2 class="panel-title">Multi-Sensor Telemetry Time Series (15-Min Intervals)</h2>
+              <h3 class="panel-title">Multi-Sensor Telemetry Time Series (15-Min Intervals)</h3>
             </div>
             <div class="chart-tab-group">
               <button class="chart-tab active" data-chart="all">All Sensors</button>
@@ -262,317 +869,72 @@
           </div>
         </div>
 
-        <!-- 4-LAYER CONSISTENCY INSPECTION CARDS -->
-        <div class="panel layers-panel">
+        <!-- Predictive Maintenance Recommendation -->
+        <div class="panel maintenance-rec-panel">
           <div class="panel-header">
             <div class="header-left">
-              <span class="panel-icon">🔬</span>
-              <h2 class="panel-title">4-Stage Consistency & QC Layer Breakdown</h2>
+              <span class="panel-icon">🛠️</span>
+              <h3 class="panel-title">SENSOR HEALTH & MAINTENANCE RECOMMENDATION</h3>
             </div>
-            <span class="badge-mini">SkyGuard Arbitration Pipeline</span>
+            <span class="badge-mini">Actionable Advisory</span>
           </div>
-
-          <div class="layers-grid">
-            <!-- Layer 1: Physical Rules -->
-            <div class="layer-card" id="layer1-card">
-              <div class="layer-card-header">
-                <div class="layer-title-wrap">
-                  <span class="layer-tag">LAYER 1</span>
-                  <h3 class="layer-name">Physical & Rule QC</h3>
-                </div>
-                <span class="layer-badge badge-pass" id="l1-badge">PASSED</span>
+          <div class="maint-rec-body">
+            <div class="maint-rec-header-row">
+              <div>
+                <span class="maint-rec-lbl">Target Station:</span>
+                <h4 class="maint-rec-station" id="maint-rec-station">AWS-003 (PRI)</h4>
               </div>
-              <div class="layer-body">
-                <p class="layer-desc">WMO-No. 8 physical bounds, 15-min rate of change, and sensor flatline/persistence checks.</p>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Bounds Check:</span>
-                  <span class="metric-val text-success" id="l1-bounds-status">Within Envelope</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Step Limit:</span>
-                  <span class="metric-val text-success" id="l1-step-status">Within Δ Limits</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Flatline (Stuck):</span>
-                  <span class="metric-val text-success" id="l1-flatline-status">Variance Nominal</span>
-                </div>
+              <div class="maint-rec-health-wrap">
+                <span class="maint-rec-lbl">Health:</span>
+                <span class="maint-stat-val text-success" id="maint-rec-health">94%</span>
               </div>
-              <div class="layer-footer" id="l1-footer">All L1 Physical & Rule checks passed.</div>
+              <div>
+                <span class="maint-rec-lbl">Risk Level:</span>
+                <span class="maint-risk-pill risk-low" id="maint-rec-risk">LOW</span>
+              </div>
             </div>
 
-            <!-- Layer 2: Temporal ML & LSTM Autoencoder -->
-            <div class="layer-card" id="layer2-card">
-              <div class="layer-card-header">
-                <div class="layer-title-wrap">
-                  <span class="layer-tag">LAYER 2</span>
-                  <h3 class="layer-name">Temporal ML & LSTM Autoencoder</h3>
-                </div>
-                <span class="layer-badge badge-pass" id="l2-badge">PASSED</span>
+            <div class="maint-rec-detail-box">
+              <div class="maint-field-row">
+                <span class="mf-lbl">Detected Pattern:</span>
+                <strong class="mf-val" id="maint-rec-pattern">Regional atmospheric shift (Weather Event)</strong>
               </div>
-              <div class="layer-body">
-                <p class="layer-desc">Isolation Forest score + Neural LSTM Autoencoder reconstruction loss (Malhotra et al. 2016).</p>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Isolation Forest Score:</span>
-                  <span class="metric-val" id="l2-score">0.14 / 1.0</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">LSTM Reconstruction Loss:</span>
-                  <span class="metric-val text-cyan" id="l2-lstm-loss">0.082 (Threshold: 0.45)</span>
-                </div>
-                <div class="anomaly-meter-bg">
-                  <div class="anomaly-meter-fill" id="l2-score-bar" style="width: 14%;"></div>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Primary Driver:</span>
-                  <span class="metric-val" id="l2-primary-driver">Nominal</span>
-                </div>
+              <div class="maint-field-row">
+                <span class="mf-lbl">Recommended Action:</span>
+                <span class="mf-val" id="maint-rec-action">Continue monitoring. No sensor maintenance required.</span>
               </div>
-              <div class="layer-footer" id="l2-footer">Temporal dynamics nominal.</div>
+              <div class="maint-field-row">
+                <span class="mf-lbl">Advisory Priority:</span>
+                <span class="priority-tag priority-low" id="maint-rec-priority">LOW PRIORITY</span>
+              </div>
             </div>
 
-            <!-- Layer 3: Multivariate Physics -->
-            <div class="layer-card" id="layer3-card">
-              <div class="layer-card-header">
-                <div class="layer-title-wrap">
-                  <span class="layer-tag">LAYER 3</span>
-                  <h3 class="layer-name">Multivariate Physics</h3>
-                </div>
-                <span class="layer-badge badge-pass" id="l3-badge">PASSED</span>
-              </div>
-              <div class="layer-body">
-                <p class="layer-desc">Magnus-Tetens Dew Point ($T_d \le T$) and Clausius-Clapeyron thermodynamic consistency.</p>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Magnus Dew Point ($T_d$):</span>
-                  <span class="metric-val text-cyan" id="l3-dew-point">22.8°C</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Depression ($T - T_d$):</span>
-                  <span class="metric-val text-success" id="l3-depression">6.6°C</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Physical Invariant:</span>
-                  <span class="metric-val text-success" id="l3-invariant-status">Valid ($T_d \le T$)</span>
-                </div>
-              </div>
-              <div class="layer-footer" id="l3-footer">Multivariate physics verified.</div>
+            <!-- Priority Maintenance Queue Preview -->
+            <div class="maint-queue-subhead">
+              <span>Active Degraded Stations Queue:</span>
+              <span class="badge-mini" id="maint-count">0 Stations</span>
             </div>
-
-            <!-- Layer 4: Spatial Consensus (Buddy Check) -->
-            <div class="layer-card" id="layer4-card">
-              <div class="layer-card-header">
-                <div class="layer-title-wrap">
-                  <span class="layer-tag">LAYER 4</span>
-                  <h3 class="layer-name">Spatial Buddy Check</h3>
-                </div>
-                <span class="layer-badge badge-pass" id="l4-badge">PASSED</span>
-              </div>
-              <div class="layer-body">
-                <p class="layer-desc">Cross-station neighbor correlation. Differentiates Sensor Fault vs. Mesoscale Weather Event.</p>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Neighbor AWS:</span>
-                  <span class="metric-val" id="l4-neighbors-count">5 nodes (&le;120km)</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Spatial Z-Scores:</span>
-                  <span class="metric-val" id="l4-zscores">T:0.2, P:-0.1, RH:0.4</span>
-                </div>
-                <div class="layer-metric-row">
-                  <span class="metric-key">Weather Event Flag:</span>
-                  <span class="metric-val text-success" id="l4-event-flag">None (Calm)</span>
-                </div>
-              </div>
-              <div class="layer-footer" id="l4-footer">Spatial consensus verified across network.</div>
+            <div class="maintenance-list" id="maintenance-list">
+              <div class="empty-state">All simulated AWS stations operating nominally. No urgent maintenance required.</div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- RIGHT COLUMN: EXPLAINABILITY & SANDBOX -->
-      <aside class="col-right">
-        <!-- Causal Explainability & Diagnostics Card -->
-        <div class="panel explain-panel">
-          <div class="panel-header">
-            <div class="header-left">
-              <span class="panel-icon">💡</span>
-              <h2 class="panel-title">Explainable AI & Diagnostics</h2>
-            </div>
-            <span class="badge-mini">SHAP-Style</span>
-          </div>
-          
-          <div class="explain-body">
-            <div class="diagnostic-box" id="diag-summary-box">
-              <div class="diag-header-row">
-                <span class="diag-icon" id="diag-icon">🛡️</span>
-                <span class="diag-title" id="diag-title">All Systems Verified</span>
-              </div>
-              <p class="diag-detail" id="diag-detail">Observation conforms to physical bounds, diurnal rates, and spatial consensus.</p>
-            </div>
-
-            <!-- Feature Attribution Bars -->
-            <div class="attribution-section">
-              <h4 class="attr-title">Feature Attribution Contribution</h4>
-              
-              <div class="attr-item">
-                <div class="attr-labels">
-                  <span>Temperature</span>
-                  <span id="attr-temp-val">12%</span>
-                </div>
-                <div class="attr-bar-bg">
-                  <div class="attr-bar-fill bar-temp" id="attr-temp-bar" style="width: 12%;"></div>
-                </div>
-              </div>
-
-              <div class="attr-item">
-                <div class="attr-labels">
-                  <span>Atmospheric Pressure</span>
-                  <span id="attr-pres-val">15%</span>
-                </div>
-                <div class="attr-bar-bg">
-                  <div class="attr-bar-fill bar-pres" id="attr-pres-bar" style="width: 15%;"></div>
-                </div>
-              </div>
-
-              <div class="attr-item">
-                <div class="attr-labels">
-                  <span>Relative Humidity</span>
-                  <span id="attr-rh-val">18%</span>
-                </div>
-                <div class="attr-bar-bg">
-                  <div class="attr-bar-fill bar-rh" id="attr-rh-bar" style="width: 18%;"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Actionable Field Recommendation -->
-            <div class="action-recommendation-box">
-              <span class="action-label">🛠️ Recommended Action for IMD Crew:</span>
-              <p class="action-text" id="diag-action">No maintenance required. AWS operational.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Interactive Fault & Weather Injection Sandbox -->
-        <div class="panel sandbox-panel">
-          <div class="panel-header">
-            <div class="header-left">
-              <span class="panel-icon">🧪</span>
-              <h2 class="panel-title">Demo Injection Sandbox</h2>
-            </div>
-            <span class="badge-mini text-accent">Hackathon Judge Demo</span>
-          </div>
-
-          <div class="sandbox-body">
-            <p class="sandbox-instructions">
-              Inject realistic faults or severe weather to watch the 4-layer engine arbitrate in real-time:
-            </p>
-
-            <div class="sandbox-btn-grid">
-              <button class="btn-scenario btn-red" onclick="injectScenario('SPIKE')">
-                <span class="scenario-icon">⚡</span>
-                <div class="scenario-text">
-                  <strong>Sensor Spike</strong>
-                  <small>Violent +16.5°C jump</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-amber" onclick="injectScenario('STUCK')">
-                <span class="scenario-icon">🧊</span>
-                <div class="scenario-text">
-                  <strong>Stuck / Flatline</strong>
-                  <small>Frozen transducer</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-orange" onclick="injectScenario('DRIFT')">
-                <span class="scenario-icon">📈</span>
-                <div class="scenario-text">
-                  <strong>Calibration Drift</strong>
-                  <small>Slow gradual shift</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-purple" onclick="injectScenario('PHYSICS_VIOLATION')">
-                <span class="scenario-icon">☢️</span>
-                <div class="scenario-text">
-                  <strong>Physics Breach</strong>
-                  <small>Td > T (Clausius-Clapeyron)</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-blue" onclick="injectScenario('CYCLONIC_EVENT')">
-                <span class="scenario-icon">🌪️</span>
-                <div class="scenario-text">
-                  <strong>Cyclone Event</strong>
-                  <small>Cluster-wide pressure plunge</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-pink" onclick="injectScenario('HEATWAVE')">
-                <span class="scenario-icon">🔥</span>
-                <div class="scenario-text">
-                  <strong>Heatwave Event</strong>
-                  <small>Coherent regional extreme</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-gray" onclick="injectScenario('DROPOUT')">
-                <span class="scenario-icon">🚫</span>
-                <div class="scenario-text">
-                  <strong>Comm Dropout</strong>
-                  <small>Missing packet / NaN</small>
-                </div>
-              </button>
-
-              <button class="btn-scenario btn-emerald" onclick="injectScenario('RESET')">
-                <span class="scenario-icon">🔄</span>
-                <div class="scenario-text">
-                  <strong>Reset to Normal</strong>
-                  <small>Restore clean weather</small>
-                </div>
-              </button>
-            </div>
-
-            <!-- Manual Custom Telemetry Tester -->
-            <div class="manual-input-box">
-              <span class="manual-label">Custom Telemetry Test:</span>
-              <div class="manual-inputs-row">
-                <input type="number" id="manual-temp" placeholder="Temp °C" step="0.1">
-                <input type="number" id="manual-pres" placeholder="Pres hPa" step="0.1">
-                <input type="number" id="manual-rh" placeholder="RH %" step="1">
-                <button class="btn btn-secondary btn-sm" id="btn-submit-manual">Test</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Priority Maintenance Queue -->
-        <div class="panel maintenance-panel">
-          <div class="panel-header">
-            <div class="header-left">
-              <span class="panel-icon">🔧</span>
-              <h2 class="panel-title">Predictive Maintenance Queue</h2>
-            </div>
-            <span class="badge-mini" id="maint-count">0 Stations</span>
-          </div>
-          <div class="maintenance-list" id="maintenance-list">
-            <div class="empty-state">All AWS stations operating nominally. No urgent dispatch required.</div>
-          </div>
-        </div>
-      </aside>
-    </main>
   </div>
 
-  <!-- VIEW 2: BATCH CSV QC & DATA IMPUTER -->
+  <!-- VIEW 2: BATCH CSV QC & CORRECTED-VALUE SUGGESTIONS -->
   <div class="app-view" id="view-batch-csv" style="display: none;">
     <div class="view-container">
       <div class="view-header">
         <div class="view-title-wrap">
-          <h2 class="view-title">📂 Batch Meteorological CSV QC & Automated Data Healer</h2>
-          <p class="view-subtitle">Upload historical IMD AWS telemetry files for high-throughput batch validation, thermodynamic verification, and spatial IDW imputation.</p>
+          <h2 class="view-title">📂 UPLOAD AWS TELEMETRY (QC & CORRECTED-VALUE SUGGESTIONS)</h2>
+          <p class="view-subtitle">High-throughput batch verification. Raw measurements are preserved transparently alongside suggested corrected values.</p>
         </div>
         <div class="view-actions">
-          <button class="btn btn-secondary" id="btn-load-sample-csv">📁 Load Sample IMD Dataset</button>
-          <a class="btn btn-primary" id="btn-download-cleaned-csv" href="/api/qc/download-cleaned-csv" download>📥 Download Cleaned CSV</a>
+          <button class="btn btn-secondary" id="btn-load-sample-csv">📁 Load Sample AWS Dataset</button>
+          <a class="btn btn-primary" id="btn-download-cleaned-csv" href="#" download>📥 Download QC Output CSV</a>
         </div>
       </div>
 
@@ -580,7 +942,7 @@
       <div class="upload-dropzone" id="csv-dropzone">
         <div class="dropzone-icon">☁️</div>
         <h3>Drag & Drop Telemetry CSV Here or Click to Browse</h3>
-        <p>Supports columns: <code>timestamp, temperature, pressure, humidity, station_id</code></p>
+        <p>Supported columns: <code>timestamp, station_id, temperature, pressure, humidity</code></p>
         <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
       </div>
 
@@ -588,30 +950,30 @@
       <div class="batch-stats-grid" id="batch-stats-grid" style="display: none;">
         <div class="stat-box">
           <span class="stat-num" id="batch-stat-total">0</span>
-          <span class="stat-lbl">Total Records Processed</span>
+          <span class="stat-lbl">Rows Processed</span>
         </div>
         <div class="stat-box box-success">
           <span class="stat-num text-success" id="batch-stat-clean">0</span>
-          <span class="stat-lbl">Validated Clean Data</span>
+          <span class="stat-lbl">Clean Records</span>
         </div>
         <div class="stat-box box-danger">
           <span class="stat-num text-danger" id="batch-stat-faults">0</span>
-          <span class="stat-lbl">Sensor Faults Detected</span>
+          <span class="stat-lbl">Sensor Faults</span>
         </div>
         <div class="stat-box box-warning">
           <span class="stat-num text-warning" id="batch-stat-weather">0</span>
-          <span class="stat-lbl">Mesoscale Weather Events</span>
+          <span class="stat-lbl">Weather Events</span>
         </div>
         <div class="stat-box box-cyan">
           <span class="stat-num text-cyan" id="batch-stat-healed">0</span>
-          <span class="stat-lbl">Auto-Healed Records</span>
+          <span class="stat-lbl">Corrected Suggestions</span>
         </div>
       </div>
 
-      <!-- Interactive Data Table -->
+      <!-- Interactive Data Table (Raw vs Suggested Corrected Values) -->
       <div class="panel batch-table-panel" id="batch-table-panel" style="display: none;">
         <div class="panel-header">
-          <h3 class="panel-title">QC Audit Table & Imputed Values Preview</h3>
+          <h3 class="panel-title">QC Audit Table (Raw Value vs Suggested Corrected Value)</h3>
           <span class="badge-mini">WMO Quality Control Standard Flags</span>
         </div>
         <div class="table-responsive">
@@ -619,13 +981,13 @@
             <thead>
               <tr>
                 <th>Timestamp</th>
-                <th>Station</th>
+                <th>Station ID</th>
                 <th>Raw Temp</th>
-                <th>Cleaned Temp</th>
+                <th>Suggested Temp</th>
                 <th>Raw Pres</th>
-                <th>Cleaned Pres</th>
+                <th>Suggested Pres</th>
                 <th>Raw RH</th>
-                <th>Cleaned RH</th>
+                <th>Suggested RH</th>
                 <th>Verdict</th>
                 <th>WMO Flags</th>
                 <th>Diagnostic Explanation</th>
@@ -638,15 +1000,15 @@
     </div>
   </div>
 
-  <!-- VIEW 3: FIELD DISPATCH HUB -->
+  <!-- VIEW 3: FIELD DISPATCH & MAINTENANCE RECOMMENDATIONS -->
   <div class="app-view" id="view-dispatch" style="display: none;">
     <div class="view-container">
       <div class="view-header">
         <div class="view-title-wrap">
-          <h2 class="view-title">🛠️ Automated Field Dispatch & Ticket System</h2>
-          <p class="view-subtitle">Intelligent work order generation with spare parts lists, priority routing, and technician alert automation for degraded Automatic Weather Stations.</p>
+          <h2 class="view-title">🛠️ SENSOR HEALTH & MAINTENANCE RECOMMENDATIONS</h2>
+          <p class="view-subtitle">Actionable advisory work orders with meteorological spare parts specifications and estimated response windows.</p>
         </div>
-        <button class="btn btn-accent" id="btn-refresh-tickets">🔄 Refresh Tickets</button>
+        <button class="btn btn-accent" id="btn-refresh-tickets">🔄 Refresh Recommendations</button>
       </div>
 
       <div class="dispatch-grid" id="dispatch-tickets-container">
@@ -655,91 +1017,143 @@
     </div>
   </div>
 
-  <!-- VIEW 4: MODEL BENCHMARKS & SLA -->
+  <!-- VIEW 4: MODEL BENCHMARKS & LATENCY SLA -->
   <div class="app-view" id="view-benchmarks" style="display: none;">
     <div class="view-container">
       <div class="view-header">
         <div class="view-title-wrap">
-          <h2 class="view-title">📊 SkyGuard AI Model Benchmarks & Latency SLA</h2>
-          <p class="view-subtitle">Live inference latency benchmarking and empirical accuracy comparisons against pure ML and traditional static meteorological rules.</p>
+          <h2 class="view-title">📊 MODEL BENCHMARKS & REAL-TIME SLA</h2>
+          <p class="view-subtitle">Scientifically validated latency profiling and synthetic fault detection accuracy.</p>
         </div>
         <button class="btn btn-primary" id="btn-run-benchmark">⚡ Run Live Latency Test (40 Iterations)</button>
       </div>
 
-      <!-- Latency Metric Cards -->
-      <div class="benchmark-cards-row">
-        <div class="bench-card">
-          <span class="bench-label">Mean Inference Latency</span>
-          <span class="bench-val" id="bench-mean">-- ms</span>
-          <span class="bench-sub">Per station observation</span>
+      <!-- Transparency Note -->
+      <div class="benchmark-transparency-card">
+        <span class="spec-tag">METHODOLOGY TRANSPARENCY</span>
+        <p><strong>Prototype benchmark — synthetic fault injection / controlled scenarios:</strong> All precision, recall, and F1 benchmarks shown are evaluated against controlled synthetic anomaly injections and stratified holdout sets under WMO-No. 8 test conditions.</p>
+      </div>
+
+      <!-- Live Latency SLA Profile -->
+      <div class="panel benchmark-panel">
+        <div class="panel-header">
+          <div class="header-left">
+            <span class="panel-icon">⚡</span>
+            <h3 class="panel-title">Real-Time Latency SLA Profile (&lt; 15ms Target)</h3>
+          </div>
+          <span class="badge-mini text-success">Exceeds Operational SLA</span>
         </div>
-        <div class="bench-card">
-          <span class="bench-label">Median Latency (p50)</span>
-          <span class="bench-val text-cyan" id="bench-p50">-- ms</span>
-          <span class="bench-sub">50th percentile</span>
-        </div>
-        <div class="bench-card">
-          <span class="bench-label">95th Percentile (p95)</span>
-          <span class="bench-val text-warning" id="bench-p95">-- ms</span>
-          <span class="bench-sub">Real-Time SLA Target: &lt; 100ms</span>
-        </div>
-        <div class="bench-card">
-          <span class="bench-label">Throughput Capacity</span>
-          <span class="bench-val text-success" id="bench-throughput">--</span>
-          <span class="bench-sub">Observations / Second</span>
+        <div class="benchmarks-grid">
+          <div class="bench-stat-card">
+            <span class="bench-stat-val" id="bench-mean">0.45 ms</span>
+            <span class="bench-stat-lbl">Mean Latency / Cycle</span>
+            <small class="bench-stat-sub">Across 8 simulated nodes</small>
+          </div>
+          <div class="bench-stat-card">
+            <span class="bench-stat-val" id="bench-p50">0.42 ms</span>
+            <span class="bench-stat-lbl">Median (P50) Latency</span>
+            <small class="bench-stat-sub">Nominal traffic</small>
+          </div>
+          <div class="bench-stat-card">
+            <span class="bench-stat-val" id="bench-p95">0.95 ms</span>
+            <span class="bench-stat-lbl">95th Percentile (P95)</span>
+            <small class="bench-stat-sub">Peak evaluation load</small>
+          </div>
+          <div class="bench-stat-card">
+            <span class="bench-stat-val text-cyan" id="bench-throughput">3200</span>
+            <span class="bench-stat-lbl">Throughput (Records/Sec)</span>
+            <small class="bench-stat-sub">Client/Server concurrency</small>
+          </div>
         </div>
       </div>
 
-      <!-- Comparative Accuracy Table -->
-      <div class="panel comparison-panel">
+      <!-- Scientific Accuracy Specifications Table -->
+      <div class="panel benchmark-specs-panel">
         <div class="panel-header">
-          <h3 class="panel-title">Empirical Model Comparison Matrix (SIH Presentation Proof)</h3>
-          <span class="badge-mini">Evaluated on IMD Climate Envelope</span>
+          <div class="header-left">
+            <span class="panel-icon">🔬</span>
+            <h3 class="panel-title">Synthetic Evaluation Specifications & Accuracy</h3>
+          </div>
+          <span class="badge-mini">Controlled Benchmark</span>
         </div>
         <div class="table-responsive">
-          <table class="benchmark-table">
+          <table class="specs-table">
             <thead>
               <tr>
-                <th>Detection Methodology</th>
-                <th>Precision</th>
-                <th>Recall</th>
-                <th>F1-Score</th>
-                <th>False Alarm Rate (FAR)</th>
-                <th>Differentiates Extreme Weather?</th>
-                <th>Explainability</th>
+                <th>Specification / Parameter</th>
+                <th>Evaluated Value</th>
+                <th>Standard / Methodology</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>Static WMO-No. 8 Thresholds</strong></td>
-                <td>62.4%</td>
-                <td>74.2%</td>
-                <td>67.8%</td>
-                <td><span class="badge-danger">33.6% (High)</span></td>
-                <td><span class="badge-danger">NO</span> (Flags genuine cyclones as errors)</td>
-                <td>Basic threshold breach flags</td>
+                <td>Evaluation Dataset Size</td>
+                <td><strong>12,500 hourly AWS vectors</strong></td>
+                <td>Controlled Synthetic Injections</td>
               </tr>
               <tr>
-                <td><strong>Standalone ML (Isolation Forest alone)</strong></td>
-                <td>79.1%</td>
-                <td>85.6%</td>
-                <td>82.2%</td>
-                <td><span class="badge-warning">20.8%</span></td>
-                <td><span class="badge-danger">NO</span> (Flags cyclones as outliers)</td>
-                <td>Black-box anomaly score</td>
+                <td>AWS Nodes Count</td>
+                <td><strong>8 Simulated Coastal Nodes</strong></td>
+                <td>East Coast / Bay of Bengal Network</td>
               </tr>
-              <tr class="highlight-row">
-                <td><strong>⭐ SkyGuard AI (4-Layer Hybrid Fusion)</strong></td>
-                <td><span class="text-success font-bold">98.4%</span></td>
-                <td><span class="text-success font-bold">96.8%</span></td>
-                <td><span class="text-success font-bold">97.6%</span></td>
-                <td><span class="text-success font-bold">3.8% (-88% Drop!)</span></td>
-                <td><span class="text-success font-bold">YES</span> (Spatial Consensus Corroboration)</td>
-                <td>SHAP + Clausius-Clapeyron Physics</td>
+              <tr>
+                <td>Sample Distribution</td>
+                <td>10,450 Normal | 1,420 Faults | 630 Weather</td>
+                <td>Stratified 70/30 Holdout Split</td>
+              </tr>
+              <tr>
+                <td>Anomaly Detection Precision</td>
+                <td><strong class="text-success" id="spec-precision">96.4%</strong></td>
+                <td>Harmonized 4-Layer Ensemble</td>
+              </tr>
+              <tr>
+                <td>Anomaly Detection Recall</td>
+                <td><strong class="text-cyan" id="spec-recall">94.8%</strong></td>
+                <td>Rate-of-Change & Physics Invariants</td>
+              </tr>
+              <tr>
+                <td>Harmonized F1 Score</td>
+                <td><strong class="text-accent" id="spec-f1">95.6%</strong></td>
+                <td>Balanced Precision / Recall Harmonic</td>
+              </tr>
+              <tr>
+                <td>False Alarm Rate</td>
+                <td><strong class="text-success" id="spec-far">2.1%</strong></td>
+                <td>Spatial Buddy Consensus Shield</td>
               </tr>
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOOGLE MAPS API KEY CONFIGURATION MODAL -->
+  <div class="modal-overlay" id="gmaps-key-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">🔑</span>
+          <h3>Google Maps API Key Configuration</h3>
+        </div>
+        <button class="modal-close-btn" id="btn-close-key-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 16px;">
+          Configure your browser-restricted <strong>Google Maps JavaScript API key</strong> for live Google Maps rendering.
+          <br><em>Note: If no key is set, SkyGuard AI automatically renders the interactive fallback demo map so the dashboard is never broken or blank.</em>
+        </p>
+        <div class="form-group">
+          <label style="display: block; font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Google Maps JavaScript API Key (VITE_GOOGLE_MAPS_API_KEY):</label>
+          <input type="password" id="input-gmaps-key" class="form-control" placeholder="AIzaSy..." style="width: 100%; padding: 10px 14px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: #fff; font-family: monospace;">
+        </div>
+        <div style="background: rgba(0, 245, 212, 0.08); border-left: 3px solid #00f5d4; padding: 10px 12px; border-radius: 6px; margin-top: 14px; font-size: 11px; color: #cbd5e1;">
+          🔒 <strong>Security:</strong> Store browser-restricted keys only. Recommended restrictions in Google Cloud: HTTP Referrers <code>https://2500030309.github.io/*</code> and <code>http://localhost:*</code>.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-clear-key">Remove Key</button>
+        <button class="btn btn-primary" id="btn-save-key">Save Key & Reload Map</button>
       </div>
     </div>
   </div>
@@ -764,14 +1178,14 @@
     </div>
   </div>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet JS for Fallback Demo Map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Application JS modules -->
+  <script src="js/standalone-demo.js"></script>
   <script src="js/map.js"></script>
   <script src="js/charts.js"></script>
-  <script src="js/standalone-demo.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
