@@ -1,0 +1,90 @@
+[
+  {
+    "station_id": "AWS-OD-001",
+    "name": "Bhubaneswar Met Observatory",
+    "code": "BBI",
+    "latitude": 20.2961,
+    "longitude": 85.8245,
+    "elevation_m": 45.0,
+    "district": "Khordha",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-002",
+    "name": "Cuttack Mahanadi Basin AWS",
+    "code": "CTC",
+    "latitude": 20.4625,
+    "longitude": 85.8828,
+    "elevation_m": 36.0,
+    "district": "Cuttack",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-003",
+    "name": "Puri Coastal AWS",
+    "code": "PRI",
+    "latitude": 19.8135,
+    "longitude": 85.8312,
+    "elevation_m": 8.0,
+    "district": "Puri",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-004",
+    "name": "Paradip Marine Port AWS",
+    "code": "PRD",
+    "latitude": 20.3164,
+    "longitude": 86.6114,
+    "elevation_m": 5.0,
+    "district": "Jagatsinghpur",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-005",
+    "name": "Kendrapara Delta AWS",
+    "code": "KND",
+    "latitude": 20.5004,
+    "longitude": 86.4230,
+    "elevation_m": 12.0,
+    "district": "Kendrapara",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-006",
+    "name": "Chandbali Coastal AWS",
+    "code": "CHB",
+    "latitude": 20.7833,
+    "longitude": 86.7333,
+    "elevation_m": 6.0,
+    "district": "Bhadrak",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-007",
+    "name": "Balasore Bay Meteorological AWS",
+    "code": "BLS",
+    "latitude": 21.4934,
+    "longitude": 86.9135,
+    "elevation_m": 16.0,
+    "district": "Balasore",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  },
+  {
+    "station_id": "AWS-OD-008",
+    "name": "Gopalpur South Coastal AWS",
+    "code": "GPL",
+    "latitude": 19.2608,
+    "longitude": 84.9080,
+    "elevation_m": 14.0,
+    "district": "Ganjam",
+    "state": "Odisha",
+    "sensors": ["Temperature", "Atmospheric Pressure", "Relative Humidity"]
+  }
+]

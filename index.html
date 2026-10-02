@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=frontend/">
+  <script>
+    window.location.replace("frontend/" + window.location.search + window.location.hash);
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard AI | Launching Operational Dashboard...</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 30%, #0f172a 0%, #020617 100%);
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(16px);
+      padding: 40px 32px;
+      border-radius: 20px;
+      max-width: 520px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 245, 212, 0.15);
+    }
+    .radar-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: rgba(0, 245, 212, 0.1);
+      border: 2px solid #00f5d4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .radar-icon::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 245, 212, 0.6);
+      animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes ping {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    h1 span {
+      background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(0, 187, 249, 0.12);
+      border: 1px solid rgba(0, 187, 249, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%);
+      color: #020617;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 245, 212, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="radar-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00f5d4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+    </div>
+    <span class="tag">SIH PS ID 26073 • PROTOTYPE</span>
+    <h1>SkyGuard <span>AI</span></h1>
+    <p>Real-Time Anomaly Detection, Explainable QC & Self-Healing for Automatic Weather Stations (AWS). Redirecting to interactive dashboard...</p>
+    <a href="frontend/" class="btn">
+      <span>Open Live Command Center</span> &rarr;
+    </a>
+  </div>
+</body>
+</html>
