@@ -1158,7 +1158,7 @@ function setupApiKeyModal() {
 
   if (openBtn && modal) {
     openBtn.addEventListener('click', () => {
-      const savedKey = localStorage.getItem('VITE_GOOGLE_MAPS_API_KEY') || '';
+      const savedKey = localStorage.getItem('VITE_GOOGLE_MAPS_API_KEY') || window.VITE_GOOGLE_MAPS_API_KEY || '';
       if (input) input.value = savedKey;
       modal.style.display = 'flex';
     });

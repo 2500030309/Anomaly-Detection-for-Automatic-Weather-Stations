@@ -46,6 +46,7 @@ class SkyGuardMap {
   }
 
   detectApiKey() {
+    const DEFAULT_KEY = "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao";
     // Check multiple environments for Google Maps API Key
     if (typeof window !== 'undefined') {
       if (window.VITE_GOOGLE_MAPS_API_KEY && window.VITE_GOOGLE_MAPS_API_KEY !== 'YOUR_KEY_HERE') {
@@ -57,10 +58,11 @@ class SkyGuardMap {
       const localKey = localStorage.getItem('VITE_GOOGLE_MAPS_API_KEY');
       if (localKey && localKey.trim() !== '') return localKey.trim();
       
-      const urlKey = new URLSearchParams(window.location.search).get('gkey');
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlKey = searchParams.get('gkey') || searchParams.get('key');
       if (urlKey && urlKey.trim() !== '') return urlKey.trim();
     }
-    return null;
+    return DEFAULT_KEY;
   }
 
   setApiKey(key) {
@@ -123,7 +125,7 @@ class SkyGuardMap {
 
       const script = document.createElement('script');
       script.id = 'google-maps-sdk';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=marker,geometry&v=weekly`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,marker,geometry&v=weekly`;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
