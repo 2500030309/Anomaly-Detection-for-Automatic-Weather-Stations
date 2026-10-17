@@ -5,6 +5,7 @@ Provides REST endpoints and live WebSocket connection for the interactive dashbo
 
 import asyncio
 import json
+from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -231,12 +232,22 @@ def get_live_benchmark():
 @app.get("/api/dispatch/tickets")
 def get_dispatch_tickets():
     """Returns active and past field maintenance tickets."""
-    # Ensure current faulty stations have tickets
+    # Ensure current faulty or degraded stations have tickets
     for sid, eval_data in simulator.latest_evaluations.items():
-        if eval_data.get("verdict") == "SENSOR_FAULT" or eval_data.get("health", {}).get("health_score", 100) < 75.0:
-            st = next(s for s in simulator.stations if s["station_id"] == sid)
-            dispatcher.generate_ticket(st, eval_data)
-    return {"tickets": dispatcher.get_all_tickets()}
+        if eval_data.get("verdict") == "SENSOR_FAULT" or eval_data.get("health", {}).get("health_score", 100) < 85.0:
+            st = next((s for s in simulator.stations if s["station_id"] == sid), None)
+            if st:
+                dispatcher.generate_ticket(st, eval_data)
+
+    tickets = dispatcher.get_all_tickets()
+    if not tickets:
+        # Pre-seed with sample inspection work order for demonstration
+        sample_st = simulator.stations[-2] # Kolkata
+        eval_data = simulator.latest_evaluations.get(sample_st["station_id"], {})
+        dispatcher.generate_ticket(sample_st, eval_data)
+        tickets = dispatcher.get_all_tickets()
+
+    return {"tickets": tickets}
 
 @app.post("/api/dispatch/create/{station_id}")
 def create_dispatch_ticket(station_id: str):

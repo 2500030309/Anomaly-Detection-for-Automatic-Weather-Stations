@@ -22,12 +22,28 @@ class Layer1RulesQC:
         is_passed = True
         fault_type = None
 
-        # 1. Null / Dropout Check
+        # 1. Null / Dropout / Non-numeric Check
+        parsed_current = {}
         for param in ["temperature", "pressure", "humidity"]:
             val = current.get(param)
-            if val is None or not isinstance(val, (int, float)) or np.isnan(val):
+            if val is None:
                 flags.append(f"MISSING_{param.upper()}")
-                violations[param] = "Value is null, NaN or missing"
+                violations[param] = "Value is null or missing (hardware dropout)"
+                fault_type = "COMM_DROPOUT"
+                is_passed = False
+                continue
+            try:
+                fval = float(val)
+                if np.isnan(fval) or np.isinf(fval):
+                    flags.append(f"MISSING_{param.upper()}")
+                    violations[param] = "Value is NaN or infinite"
+                    fault_type = "COMM_DROPOUT"
+                    is_passed = False
+                else:
+                    parsed_current[param] = fval
+            except (ValueError, TypeError):
+                flags.append(f"CORRUPT_{param.upper()}")
+                violations[param] = f"Sensor transmitted invalid non-numeric token: {val}"
                 fault_type = "COMM_DROPOUT"
                 is_passed = False
 
@@ -42,7 +58,7 @@ class Layer1RulesQC:
 
         # 2. Physical Range Check (WMO-No. 8)
         for param, limits in self.bounds.items():
-            val = float(current[param])
+            val = parsed_current[param]
             if val < limits["min"] or val > limits["max"]:
                 flags.append(f"OUT_OF_BOUNDS_{param.upper()}")
                 violations[param] = f"Value {val}{limits['unit']} outside physical limits [{limits['min']}, {limits['max']}]"
@@ -53,21 +69,31 @@ class Layer1RulesQC:
         if history and len(history) > 0:
             last = history[-1]
             for param, limit in self.step_limits.items():
-                if param in current and param in last and last[param] is not None:
-                    delta = abs(float(current[param]) - float(last[param]))
-                    if delta > limit:
-                        flags.append(f"RATE_OF_CHANGE_{param.upper()}")
-                        violations[param] = f"15-min delta {round(delta, 2)} exceeds maximum plausible rate {limit}"
-                        is_passed = False
-                        if not fault_type:
-                            fault_type = "SPIKE"
+                if param in parsed_current and param in last and last[param] is not None:
+                    try:
+                        last_val = float(last[param])
+                        delta = abs(parsed_current[param] - last_val)
+                        if delta > limit:
+                            flags.append(f"RATE_OF_CHANGE_{param.upper()}")
+                            violations[param] = f"15-min delta {round(delta, 2)} exceeds maximum plausible rate {limit}"
+                            is_passed = False
+                            if not fault_type:
+                                fault_type = "SPIKE"
+                    except (ValueError, TypeError):
+                        pass
 
         # 4. Persistence / Stuck Sensor Check (Flatline)
         # Needs at least 4 past readings
-        recent_window = (history + [current])[-5:]
+        recent_window = (history + [parsed_current])[-5:]
         if len(recent_window) >= 4:
             for param, pcfg in self.persistence.items():
-                vals = [r[param] for r in recent_window if param in r and r[param] is not None]
+                vals = []
+                for r in recent_window:
+                    if param in r and r[param] is not None:
+                        try:
+                            vals.append(float(r[param]))
+                        except (ValueError, TypeError):
+                            pass
                 if len(vals) >= 4:
                     std_dev = float(np.std(vals))
                     if std_dev < pcfg["min_std"]:

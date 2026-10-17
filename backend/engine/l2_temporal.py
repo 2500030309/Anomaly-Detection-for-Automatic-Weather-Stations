@@ -46,15 +46,24 @@ class Layer2TemporalML:
         self.is_calibrated = True
 
     def extract_features(self, current: Dict[str, float], history: List[Dict[str, float]]) -> np.ndarray:
-        t = float(current["temperature"]) if current.get("temperature") is not None else 28.0
-        p = float(current["pressure"]) if current.get("pressure") is not None else 1010.0
-        rh = float(current["humidity"]) if current.get("humidity") is not None else 65.0
+        def _to_float(d, key, default):
+            v = d.get(key)
+            if v is None: return default
+            try:
+                fv = float(v)
+                return default if (np.isnan(fv) or np.isinf(fv)) else fv
+            except (ValueError, TypeError):
+                return default
+
+        t = _to_float(current, "temperature", 28.0)
+        p = _to_float(current, "pressure", 1010.0)
+        rh = _to_float(current, "humidity", 65.0)
 
         if history and len(history) > 0:
             last = history[-1]
-            last_t = float(last["temperature"]) if last.get("temperature") is not None else t
-            last_p = float(last["pressure"]) if last.get("pressure") is not None else p
-            last_rh = float(last["humidity"]) if last.get("humidity") is not None else rh
+            last_t = _to_float(last, "temperature", t)
+            last_p = _to_float(last, "pressure", p)
+            last_rh = _to_float(last, "humidity", rh)
             dt = t - last_t
             dp = p - last_p
             drh = rh - last_rh

@@ -116,24 +116,48 @@ class AWSSimulator:
         - "HEATWAVE": Cluster-wide extreme heat (Genuine Weather Event)
         - "RESET": Resets all active faults to clean nominal baseline
         """
-        if scenario_type == "RESET":
+        sType = (scenario_type or "RESET").upper().strip()
+        if sType in ["RESET", "NOMINAL", "NORMAL", "CLEAR"]:
             self.active_injections.clear()
             self.global_scenario = None
             self.global_scenario_ticks = 0
-            return {"status": "SUCCESS", "message": "All faults cleared. System returned to nominal state."}
+            return {"status": "SUCCESS", "message": "All faults cleared. System returned to nominal baseline."}
 
-        if scenario_type in ["CYCLONIC_EVENT", "HEATWAVE"]:
-            self.global_scenario = scenario_type
+        if sType in ["CYCLONIC_EVENT", "CYCLONE", "CYCLONE-LIKE WEATHER EVENT"]:
+            self.global_scenario = "CYCLONIC_EVENT"
             self.global_scenario_ticks = duration_ticks
             return {
                 "status": "SUCCESS",
-                "message": f"Global Mesoscale Weather Event '{scenario_type}' injected across all {len(self.stations)} AWS nodes."
+                "message": f"Global Mesoscale Weather Event 'CYCLONIC_EVENT' injected across all {len(self.stations)} AWS nodes."
             }
+
+        if sType in ["HEATWAVE", "EXTREME_HEATWAVE"]:
+            self.global_scenario = "HEATWAVE"
+            self.global_scenario_ticks = duration_ticks
+            return {
+                "status": "SUCCESS",
+                "message": f"Global Mesoscale Weather Event 'HEATWAVE' injected across all {len(self.stations)} AWS nodes."
+            }
+
+        # Normalize station-specific fault subtypes
+        normalized_fault = sType
+        if sType in ["SPIKE", "SENSOR_SPIKE"]:
+            normalized_fault = "SPIKE"
+        elif sType in ["STUCK", "STUCK_FLATLINE", "FLATLINE"]:
+            normalized_fault = "STUCK"
+        elif sType in ["DRIFT", "CALIBRATION_DRIFT"]:
+            normalized_fault = "DRIFT"
+        elif sType in ["PHYSICS_VIOLATION", "PHYSICS_BREACH", "PHYSICS"]:
+            normalized_fault = "PHYSICS_VIOLATION"
+        elif sType in ["DROPOUT", "COMM_DROPOUT", "NULL"]:
+            normalized_fault = "DROPOUT"
+        elif sType in ["OUT_OF_BOUNDS", "BOUNDS"]:
+            normalized_fault = "OUT_OF_BOUNDS"
 
         # Station-specific sensor fault injection
         target = target_station_id or self.stations[0]["station_id"]
         injection_data = {
-            "type": scenario_type,
+            "type": normalized_fault,
             "duration": duration_ticks,
             "ticks_left": duration_ticks,
             "custom": custom_params or {}
@@ -141,7 +165,7 @@ class AWSSimulator:
         self.active_injections[target] = injection_data
         return {
             "status": "SUCCESS",
-            "message": f"Fault '{scenario_type}' successfully injected into station {target} for {duration_ticks} ticks."
+            "message": f"Fault '{normalized_fault}' successfully injected into station {target} for {duration_ticks} ticks."
         }
 
     def tick(self) -> Dict[str, Dict[str, Any]]:
@@ -192,6 +216,7 @@ class AWSSimulator:
                 # Instantaneous violent jump in temperature or pressure
                 r["temperature"] = round(r["temperature"] + 16.5, 2)
                 r["pressure"] = round(r["pressure"] - 14.0, 2)
+                r["dew_point"] = compute_dew_point(r["temperature"], r["humidity"])
             elif inj_type == "STUCK":
                 # Freeze at previous reading
                 prev = self.history[sid][-1] if self.history[sid] else r
@@ -203,6 +228,7 @@ class AWSSimulator:
                 # Progressive linear drift away from physical reality
                 drift_step = (inj["duration"] - ticks_left + 1) * 1.8
                 r["temperature"] = round(r["temperature"] + drift_step, 2)
+                r["dew_point"] = compute_dew_point(r["temperature"], r["humidity"])
             elif inj_type == "PHYSICS_VIOLATION":
                 # Clausius-Clapeyron violation: RH pushed to 99% while T is high -> Dew point > T
                 r["temperature"] = 28.0
@@ -217,6 +243,7 @@ class AWSSimulator:
             elif inj_type == "OUT_OF_BOUNDS":
                 # WMO bound breach
                 r["temperature"] = 78.5 # Above 60°C WMO limit
+                r["dew_point"] = compute_dew_point(r["temperature"], r["humidity"])
 
             inj["ticks_left"] -= 1
             if inj["ticks_left"] <= 0:

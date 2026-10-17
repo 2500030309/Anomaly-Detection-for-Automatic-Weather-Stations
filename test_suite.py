@@ -134,5 +134,49 @@ class TestSkyGuardAI(unittest.TestCase):
         self.assertTrue(perf["meets_realtime_sla"])
         self.assertLess(perf["p95_ms"], 100.0)
 
+    def test_dropout_resilience_and_null_telemetry(self):
+        """Test resilience against missing/dropout/NaN telemetry across all layers."""
+        station = self.stations[0]
+        null_reading = {"temperature": None, "pressure": None, "humidity": None}
+        eval_res = self.engine.analyze_station(station, null_reading, self.stations, {station["station_id"]: null_reading})
+        self.assertEqual(eval_res["verdict"], "SENSOR_FAULT")
+        self.assertEqual(eval_res["layers"]["l1_rules"]["fault_type"], "COMM_DROPOUT")
+        self.assertTrue(eval_res["is_healed"])
+
+    def test_all_stations_have_spatial_buddies(self):
+        """Verify all 8 coastal AWS stations have >= 2 buddy stations within corridor."""
+        for s in self.stations:
+            neighbors = self.engine.l4.find_neighbors(s, self.stations)
+            self.assertGreaterEqual(
+                len(neighbors), 2,
+                f"Station {s['station_id']} ({s['name']}) has only {len(neighbors)} neighbors, needs at least 2."
+            )
+
+    def test_scenario_normalization_and_injection(self):
+        """Verify scenario alias normalization and reset in simulator."""
+        sim = AWSSimulator("data/sample_stations.json")
+        res_spike = sim.inject_scenario("SENSOR_SPIKE", "AWS-001")
+        self.assertEqual(res_spike["status"], "SUCCESS")
+        self.assertEqual(sim.active_injections["AWS-001"]["type"], "SPIKE")
+
+        res_reset = sim.inject_scenario("NORMAL")
+        self.assertEqual(res_reset["status"], "SUCCESS")
+        self.assertEqual(len(sim.active_injections), 0)
+
+    def test_pipeline_enrichment_fields(self):
+        """Verify that analysis output contains all evidence, checklist, and recommendation fields."""
+        station = self.stations[0]
+        reading = {"temperature": 30.0, "pressure": 1010.0, "humidity": 60.0}
+        eval_res = self.engine.analyze_station(station, reading, self.stations, {station["station_id"]: reading})
+        
+        self.assertIn("feature_evidence", eval_res)
+        self.assertIn("why_decision", eval_res)
+        self.assertIn("evidence_checklist", eval_res)
+        self.assertIn("confidence", eval_res)
+        self.assertIn("maintenance_recommendation", eval_res)
+        self.assertIn("suggested_correction", eval_res)
+        self.assertEqual(len(eval_res["evidence_checklist"]), 4)
+
 if __name__ == "__main__":
     unittest.main()
+

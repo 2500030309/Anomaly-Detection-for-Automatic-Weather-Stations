@@ -72,14 +72,29 @@ class Layer4SpatialQC:
                 "details": f"Sparse network coverage: Only {len(neighbor_readings)} buddy station(s) found within {self.max_distance} km. Defaulting to local temporal QC."
             }
 
+        def _safe_float(d, key, default=0.0) -> float:
+            if not isinstance(d, dict):
+                return default
+            v = d.get(key)
+            if v is None:
+                return default
+            try:
+                fv = float(v)
+                return default if (np.isnan(fv) or np.isinf(fv)) else fv
+            except (ValueError, TypeError):
+                return default
+
         # In meteorology (WMO-No. 8), pressure must be reduced to Mean Sea Level Pressure (MSLP)
         # before spatial neighbor comparison, because pressure naturally varies with elevation.
         t_elev = target_station.get("elevation_m", 0.0)
-        t_temp = float(current_reading["temperature"]) if current_reading.get("temperature") is not None else 28.0
+        t_temp = _safe_float(current_reading, "temperature", 28.0)
 
         def reduce_to_mslp(p_station: float, elev: float, temp_c: float) -> float:
-            tk = temp_c + 273.15
-            return p_station * ((1.0 - (0.0065 * elev) / (tk + 0.0065 * elev)) ** -5.257)
+            tk = max(200.0, temp_c + 273.15)
+            denom = tk + 0.0065 * elev
+            if abs(denom) < 1e-6:
+                return p_station
+            return p_station * ((1.0 - (0.0065 * elev) / denom) ** -5.257)
 
         # Spatial Z-score evaluation for each parameter
         z_scores = {}
@@ -89,31 +104,31 @@ class Layer4SpatialQC:
 
         for param in ["temperature", "pressure", "humidity"]:
             if param == "pressure":
-                cur_p = float(current_reading["pressure"]) if current_reading.get("pressure") is not None else 1013.25
+                cur_p = _safe_float(current_reading, "pressure", 1013.25)
                 target_val = reduce_to_mslp(cur_p, t_elev, t_temp)
                 n_vals = [
                     reduce_to_mslp(
-                        float(all_latest_readings[n["station_id"]]["pressure"]),
+                        _safe_float(all_latest_readings[n["station_id"]], "pressure", 1013.25),
                         n.get("elevation_m", 0.0),
-                        float(all_latest_readings[n["station_id"]].get("temperature", 28.0))
+                        _safe_float(all_latest_readings[n["station_id"]], "temperature", 28.0)
                     )
                     for n in neighbors
                     if n["station_id"] in all_latest_readings and all_latest_readings[n["station_id"]] is not None and all_latest_readings[n["station_id"]].get("pressure") is not None
                 ]
             elif param == "temperature":
                 # Elevation lapse rate normalized (~0.65°C per 100m)
-                cur_t = float(current_reading["temperature"]) if current_reading.get("temperature") is not None else 28.0
+                cur_t = _safe_float(current_reading, "temperature", 28.0)
                 target_val = cur_t + (t_elev / 100.0) * 0.65
                 n_vals = [
-                    float(all_latest_readings[n["station_id"]][param]) + (n.get("elevation_m", 0.0) / 100.0) * 0.65
+                    _safe_float(all_latest_readings[n["station_id"]], param, 28.0) + (n.get("elevation_m", 0.0) / 100.0) * 0.65
                     for n in neighbors
                     if n["station_id"] in all_latest_readings and all_latest_readings[n["station_id"]] is not None and all_latest_readings[n["station_id"]].get(param) is not None
                 ]
             else:
-                cur_param = float(current_reading[param]) if current_reading.get(param) is not None else 50.0
+                cur_param = _safe_float(current_reading, param, 50.0)
                 target_val = cur_param
                 n_vals = [
-                    float(all_latest_readings[n["station_id"]][param])
+                    _safe_float(all_latest_readings[n["station_id"]], param, 50.0)
                     for n in neighbors
                     if n["station_id"] in all_latest_readings and all_latest_readings[n["station_id"]] is not None and all_latest_readings[n["station_id"]].get(param) is not None
                 ]
@@ -139,11 +154,12 @@ class Layer4SpatialQC:
         # Check if neighbors ALSO experienced rapid pressure plunge or temperature spike
         is_weather_event = False
         weather_event_type = None
+        spatial_agreement_ratio = 1.0 if not is_spatial_outlier else round(max(0.2, 1.0 - (len(outlier_params) / 3.0)), 2)
 
         if target_history and len(target_history) > 0 and all_histories:
             last_target = target_history[-1]
-            dt_p = float(current_reading.get("pressure", 1010.0)) - float(last_target.get("pressure", 1010.0))
-            dt_t = float(current_reading.get("temperature", 28.0)) - float(last_target.get("temperature", 28.0))
+            dt_p = _safe_float(current_reading, "pressure", 1010.0) - _safe_float(last_target, "pressure", 1010.0)
+            dt_t = _safe_float(current_reading, "temperature", 28.0) - _safe_float(last_target, "temperature", 28.0)
 
             # Case A: Rapid Barometric Drop (Cyclone / Squall)
             if dt_p < -2.5:
@@ -151,12 +167,12 @@ class Layer4SpatialQC:
                 for nid in neighbor_ids:
                     hist = all_histories.get(nid, [])
                     if hist and len(hist) > 0:
-                        cur_p = float(all_latest_readings[nid].get("pressure", 1010.0))
+                        cur_p = _safe_float(all_latest_readings.get(nid, {}), "pressure", 1010.0)
                         # Check if hist[-1] is already current tick
                         if len(hist) >= 2 and hist[-1].get("timestamp") == current_reading.get("timestamp"):
-                            prev_p = float(hist[-2].get("pressure", 1010.0))
+                            prev_p = _safe_float(hist[-2], "pressure", 1010.0)
                         else:
-                            prev_p = float(hist[-1].get("pressure", 1010.0))
+                            prev_p = _safe_float(hist[-1], "pressure", 1010.0)
                         if (cur_p - prev_p) < -2.0:
                             neighbor_drops += 1
 
@@ -164,24 +180,29 @@ class Layer4SpatialQC:
                 if agreement >= self.event_ratio:
                     is_weather_event = True
                     weather_event_type = "RAPID_PRESSURE_DROP_CYCLONIC"
+                    spatial_agreement_ratio = round(agreement, 2)
 
             # Case B: Extreme Regional Heatwave
-            if float(current_reading.get("temperature", 0.0)) > 43.0:
+            if _safe_float(current_reading, "temperature", 0.0) > 43.0:
                 high_temp_count = sum(
-                    1 for r in neighbor_readings if float(r.get("temperature", 0.0)) > 41.0
+                    1 for r in neighbor_readings if _safe_float(r, "temperature", 0.0) > 41.0
                 )
-                if high_temp_count / max(1, len(neighbor_readings)) >= self.event_ratio:
+                agreement = high_temp_count / max(1, len(neighbor_readings))
+                if agreement >= self.event_ratio:
                     is_weather_event = True
                     weather_event_type = "EXTREME_HEATWAVE"
+                    spatial_agreement_ratio = round(agreement, 2)
 
         return {
             "passed": not is_spatial_outlier or is_weather_event,
             "has_consensus": True,
             "neighbor_count": len(neighbor_readings),
+            "spatial_agreement_ratio": spatial_agreement_ratio,
             "neighbors": [
                 {
                     "station_id": n["station_id"],
                     "name": n["name"],
+                    "code": n.get("code", n["station_id"]),
                     "distance_km": n["distance_km"]
                 }
                 for n in neighbors[:5]

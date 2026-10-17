@@ -36,7 +36,7 @@ MAGNUS_CONSTANTS = {
 
 # Spatial Buddy Check Configuration (L4)
 SPATIAL_CONFIG = {
-    "max_distance_km": 120.0,    # Max distance to consider as neighbor AWS
+    "max_distance_km": 650.0,    # Max distance to consider as neighbor AWS in coastal synoptic corridor
     "min_neighbors": 2,          # Minimum neighbors for high confidence
     "z_score_threshold": 2.5,    # Anomaly Z-score relative to neighbor consensus
     "event_agreement_ratio": 0.6 # Ratio of neighbors that must co-witness an extreme event

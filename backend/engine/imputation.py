@@ -16,16 +16,22 @@ WMO_FLAG_HEALED = 2           # Erroneous sensor reading replaced with healed im
 WMO_FLAG_WEATHER_EVENT = 3    # Extreme reading verified as authentic mesoscale weather
 
 class DataImputer:
-    def __init__(self, max_distance_km: float = 140.0):
+    def __init__(self, max_distance_km: float = 650.0):
         self.max_distance = max_distance_km
 
     def reduce_to_mslp(self, p_station: float, elev: float, temp_c: float) -> float:
-        tk = temp_c + 273.15
-        return p_station * ((1.0 - (0.0065 * elev) / (tk + 0.0065 * elev)) ** -5.257)
+        tk = max(200.0, temp_c + 273.15)
+        denom = tk + 0.0065 * elev
+        if abs(denom) < 1e-6:
+            return p_station
+        return p_station * ((1.0 - (0.0065 * elev) / denom) ** -5.257)
 
     def mslp_to_station_pressure(self, p_mslp: float, elev: float, temp_c: float) -> float:
-        tk = temp_c + 273.15
-        return p_mslp * ((1.0 - (0.0065 * elev) / (tk + 0.0065 * elev)) ** 5.257)
+        tk = max(200.0, temp_c + 273.15)
+        denom = tk + 0.0065 * elev
+        if abs(denom) < 1e-6:
+            return p_mslp
+        return p_mslp * ((1.0 - (0.0065 * elev) / denom) ** 5.257)
 
     def heal_reading(
         self,
@@ -88,13 +94,21 @@ class DataImputer:
             if not nr or nr.get("temperature") is None or nr.get("pressure") is None:
                 continue
 
+            try:
+                n_temp = float(nr["temperature"])
+                n_pres = float(nr["pressure"])
+                n_rh = float(nr.get("humidity", 65.0))
+            except (ValueError, TypeError):
+                continue
+
+            # Skip corrupted neighbor values so they do not taint IDW consensus
+            if n_temp < -40.0 or n_temp > 60.0 or n_pres < 500.0 or n_pres > 1085.0:
+                continue
+
             dist = haversine_distance(t_lat, t_lon, s["latitude"], s["longitude"])
             if dist <= self.max_distance:
                 weight = 1.0 / max(dist ** 2, 1.0)
                 n_elev = s.get("elevation_m", 15.0)
-                n_temp = float(nr["temperature"])
-                n_pres = float(nr["pressure"])
-                n_rh = float(nr.get("humidity", 65.0))
 
                 # Normalize to sea level for spatial weighting
                 n_slp = self.reduce_to_mslp(n_pres, n_elev, n_temp)
@@ -134,19 +148,19 @@ class DataImputer:
         raw_rh = raw_reading.get("humidity")
 
         # Temperature healing
-        if raw_t is None or "temperature" in violations or raw_t < -40 or raw_t > 60:
+        if raw_t is None or "temperature" in violations or (isinstance(raw_t, (int, float)) and (raw_t < -40 or raw_t > 60)):
             healed["temperature"] = est_temp
             flags["temperature"] = WMO_FLAG_HEALED
             healed_params.append("temperature")
 
         # Pressure healing
-        if raw_p is None or "pressure" in violations or raw_p < 500 or raw_p > 1085:
+        if raw_p is None or "pressure" in violations or (isinstance(raw_p, (int, float)) and (raw_p < 500 or raw_p > 1085)):
             healed["pressure"] = est_pres
             flags["pressure"] = WMO_FLAG_HEALED
             healed_params.append("pressure")
 
         # Humidity healing
-        if raw_rh is None or "humidity" in violations or raw_rh < 0 or raw_rh > 100:
+        if raw_rh is None or "humidity" in violations or (isinstance(raw_rh, (int, float)) and (raw_rh < 0 or raw_rh > 100)):
             healed["humidity"] = est_rh
             flags["humidity"] = WMO_FLAG_HEALED
             healed_params.append("humidity")
@@ -156,7 +170,7 @@ class DataImputer:
         final_rh = healed["humidity"]
         final_td = compute_dew_point(final_t, final_rh)
 
-        if final_td > final_t:
+        if final_td is not None and final_t is not None and final_td > final_t:
             # Rebalance RH so Td equals T (saturation limit)
             healed["humidity"] = 99.0
             final_td = compute_dew_point(final_t, 99.0)
@@ -171,6 +185,6 @@ class DataImputer:
             "reading": healed,
             "healed_params": healed_params,
             "qc_flags": flags,
-            "confidence": round(float(min(0.96, 0.70 + 0.05 * len(neighbor_data))), 2),
-            "method": "SPATIAL_IDW_PHYSICS_FUSION"
+            "confidence": confidence,
+            "method": method
         }
